@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — AS-pire ✦</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+<div class="mesh"></div>
+
+<div class="top-bar">
+  <a href="index.html" class="logo-wrap">
+    <span class="logo-AS">AS</span><span class="logo-dash">-</span><span class="logo-pire">pire</span>
+  </a>
+  <div class="top-actions">
+    <a href="calendar.html" class="icon-btn" title="Calendar">📅</a>
+    <a href="index.html" class="back-btn">← Back</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="page-header">
+    <div class="page-title">Settings</div>
+    <div class="page-subtitle">Customize your experience</div>
+  </div>
+
+  <!-- NAMES -->
+  <div class="settings-section">
+    <div class="section-label">User Names</div>
+    <div class="setting-card">
+      <div class="m-field">
+        <label>A — Your Name</label>
+        <input type="text" class="m-input" id="nameA" placeholder="e.g. Aryan">
+      </div>
+      <div class="m-field" style="margin-top:12px;">
+        <label>S — Friend's Name</label>
+        <input type="text" class="m-input" id="nameS" placeholder="e.g. Sahil">
+      </div>
+      <div class="m-btns" style="margin-top:16px;">
+        <button class="m-btn primary" onclick="saveNames()">Save Names ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIXED TASKS -->
+  <div class="settings-section">
+    <div class="section-label">Fixed Daily Tasks</div>
+    <div class="setting-card">
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="s-name">📌 Fixed Tasks</div>
+          <div class="s-desc">These tasks appear every day in the Daily section automatically</div>
+        </div>
+      </div>
+
+      <div class="fixed-task-list" id="fixedTaskList">
+        <!-- rendered by JS -->
+      </div>
+
+      <div class="add-fixed-row" style="margin-top:16px;">
+        <input type="text" class="t-input" id="fixedInput" placeholder="Add a fixed daily task...">
+        <select class="who-select" id="fixedWho">
+          <option value="you">A</option>
+          <option value="friend">S</option>
+        </select>
+        <button class="add-btn" onclick="addFixedTask()" title="Add">+</button>
+      </div>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px;">
+        You'll be asked to confirm which user (A or S) when adding.
+      </p>
+    </div>
+  </div>
+
+  <!-- RESET -->
+  <div class="settings-section">
+    <div class="section-label">Data</div>
+    <div class="setting-card">
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="s-name">🗑 Clear All Tasks</div>
+          <div class="s-desc">Permanently delete all tasks for both users</div>
+        </div>
+        <button class="m-btn secondary" style="flex:0;white-space:nowrap;padding:10px 18px;" onclick="clearAllTasks()">Clear</button>
+      </div>
+    </div>
+    <div class="setting-card" style="margin-top:10px;">
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="s-name">🔄 Reset All Data</div>
+          <div class="s-desc">Wipe everything including calendar — fresh start</div>
+        </div>
+        <button class="m-btn secondary" style="flex:0;white-space:nowrap;padding:10px 18px;background:rgba(224,107,107,0.12);color:var(--rose);" onclick="resetAll()">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIREBASE INFO -->
+  <div class="settings-section">
+    <div class="section-label">Sync Status</div>
+    <div class="setting-card">
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="s-name">☁️ Firebase Sync</div>
+          <div class="s-desc" id="syncStatus">Checking connection...</div>
+        </div>
+        <div class="sync-indicator" id="syncIndicator" style="width:10px;height:10px;border-radius:50%;background:var(--gold);"></div>
+      </div>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:14px;line-height:1.6;">
+        Firebase: aspire-2924d · Realtime Database<br>
+        Data path: <span style="color:var(--gold2);">aspire/</span><br>
+        Deploy via Netlify — connect the repo and it works automatically.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<!-- CONFIRM MODAL for user selection -->
+<div class="overlay" id="confirmModal">
+  <div class="modal">
+    <div class="modal-title">Add for whom?</div>
+    <p style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-bottom:20px;">This fixed task will appear every day for:</p>
+    <div id="confirmTaskPreview" style="background:var(--s2);border-radius:10px;padding:12px 16px;font-size:14px;color:var(--text);margin-bottom:20px;border:1px solid var(--border2);"></div>
+    <div class="m-btns">
+      <button class="m-btn secondary" id="confirmA" onclick="confirmAdd('you')">A — <span id="confirmNameA">A</span></button>
+      <button class="m-btn primary" id="confirmS" onclick="confirmAdd('friend')">S — <span id="confirmNameS">S</span></button>
+    </div>
+    <div class="m-btns" style="margin-top:8px;">
+      <button class="m-btn secondary" onclick="closeConfirm()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="sync-pill">
+  <div class="sync-dot local" id="syncDot"></div>
+  <span id="syncLbl">local</span>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+
+// ── FIREBASE ──
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDErNk02qqYnbVFskumgNGch47gJJCzMTA",
+  authDomain: "aspire-2924d.firebaseapp.com",
+  databaseURL: "https://aspire-2924d-default-rtdb.firebaseio.com",
+  projectId: "aspire-2924d",
+  storageBucket: "aspire-2924d.firebasestorage.app",
+  messagingSenderId: "260852889050",
+  appId: "1:260852889050:web:136fe46f8fd42db64b3ce3"
+};
+
+const fs = document.createElement('script');
+fs.type = 'module';
+fs.textContent = `
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  try {
+    const app = initializeApp(${JSON.stringify(FIREBASE_CONFIG)});
+    const db = getDatabase(app);
+    window._fbPersist = (path, val) => set(ref(db,'aspire/'+path), val);
+    window._fbRemove = (path) => remove(ref(db,'aspire/'+path));
+    onValue(ref(db,'aspire'), (snap) => { if(snap.val()) window._fbStateUpdate(snap.val()); });
+    window._fbReady = true;
+  } catch(e){ console.warn('Firebase error:', e); }
+`;
+document.head.appendChild(fs);
+window._fbReady = false;
+
+let _state = JSON.parse(localStorage.getItem('aspire_s')||'null') || {names:{you:'A',friend:'S'},fixedTasks:{you:[],friend:[]}};
+if(!_state.fixedTasks) _state.fixedTasks = {you:[],friend:[]};
+
+window._fbStateUpdate = function(ns){
+  _state = ns;
+  if(!_state.fixedTasks) _state.fixedTasks = {you:[],friend:[]};
+  render();
+};
+
+setInterval(function(){
+  if(window._fbReady){
+    document.getElementById('syncDot').className='sync-dot live';
+    document.getElementById('syncLbl').textContent='live 🔥';
+    document.getElementById('syncStatus').textContent='Connected to Firebase Realtime Database';
+    document.getElementById('syncIndicator').style.background='var(--sage)';
+  }
+},1000);
+
+function saveState(){
+  localStorage.setItem('aspire_s', JSON.stringify(_state));
+  if(window._fbReady && window._fbPersist){
+    window._fbPersist('fixedTasks', _state.fixedTasks);
+  }
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function render(){
+  var yn = (_state.names&&_state.names.you)||'A';
+  var fn = (_state.names&&_state.names.friend)||'S';
+  document.getElementById('nameA').value = yn;
+  document.getElementById('nameS').value = fn;
+  document.getElementById('confirmNameA').textContent = yn;
+  document.getElementById('confirmNameS').textContent = fn;
+
+  // Render fixed tasks
+  var all = [];
+  var yf = (_state.fixedTasks&&_state.fixedTasks.you)||[];
+  var ff = (_state.fixedTasks&&_state.fixedTasks.friend)||[];
+  yf.forEach(function(t){ all.push({...t, owner:'you', ownerLabel: yn}); });
+  ff.forEach(function(t){ all.push({...t, owner:'friend', ownerLabel: fn}); });
+
+  var list = document.getElementById('fixedTaskList');
+  if(!all.length){
+    list.innerHTML='<p style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--muted);padding:8px 0;">No fixed tasks yet. Add one below.</p>';
+  } else {
+    list.innerHTML = all.map(function(t){
+      return '<div class="fixed-task-item">'
+        +'<span class="ft-text">'+esc(t.text)+'</span>'
+        +'<span class="ft-who">'+esc(t.ownerLabel)+'</span>'
+        +'<button class="ft-del" onclick="removeFixed(\''+t.owner+'\',\''+t.id+'\')">×</button>'
+        +'</div>';
+    }).join('');
+  }
+}
+
+window.saveNames = function(){
+  var y = document.getElementById('nameA').value.trim() || 'A';
+  var f = document.getElementById('nameS').value.trim() || 'S';
+  if(!_state.names) _state.names = {};
+  _state.names.you = y;
+  _state.names.friend = f;
+  localStorage.setItem('aspire_s', JSON.stringify(_state));
+  if(window._fbReady && window._fbPersist){
+    window._fbPersist('names/you', y);
+    window._fbPersist('names/friend', f);
+  }
+  // Show saved flash
+  var btn = document.querySelector('.m-btn.primary');
+  var orig = btn.textContent;
+  btn.textContent = '✓ Saved!';
+  setTimeout(function(){ btn.textContent = orig; }, 1500);
+  render();
+};
+
+// ── FIXED TASKS ──
+var pendingTaskText = '';
+var pendingWho = null;
+
+window.addFixedTask = function(){
+  var text = document.getElementById('fixedInput').value.trim();
+  if(!text) return;
+  pendingTaskText = text;
+  // Show the confirm modal — always ask who it's for
+  document.getElementById('confirmTaskPreview').textContent = '"' + text + '"';
+  document.getElementById('confirmModal').classList.add('show');
+};
+
+window.closeConfirm = function(){
+  document.getElementById('confirmModal').classList.remove('show');
+  pendingTaskText = '';
+};
+
+window.confirmAdd = function(who){
+  if(!pendingTaskText) return;
+  var id = 'fx'+Date.now()+Math.random().toString(36).slice(2,5);
+  if(!_state.fixedTasks) _state.fixedTasks = {you:[],friend:[]};
+  if(!_state.fixedTasks[who]) _state.fixedTasks[who] = [];
+  _state.fixedTasks[who].push({id:id, text:pendingTaskText});
+  saveState();
+  document.getElementById('fixedInput').value = '';
+  closeConfirm();
+  render();
+};
+
+window.removeFixed = function(who, id){
+  if(!_state.fixedTasks || !_state.fixedTasks[who]) return;
+  _state.fixedTasks[who] = _state.fixedTasks[who].filter(function(t){ return t.id !== id; });
+  saveState();
+  render();
+};
+
+window.clearAllTasks = function(){
+  if(!confirm('Clear all tasks for both A and S? Calendar data is preserved.')) return;
+  ['you','friend'].forEach(function(p){
+    if(_state[p]){ _state[p].daily={}; _state[p].weekly={}; _state[p].dailyReset=null; _state[p].weeklyReset=null; }
+  });
+  localStorage.setItem('aspire_s', JSON.stringify(_state));
+  if(window._fbReady && window._fbPersist){
+    window._fbPersist('you/daily', {});
+    window._fbPersist('friend/daily', {});
+    window._fbPersist('you/weekly', {});
+    window._fbPersist('friend/weekly', {});
+    window._fbPersist('you/dailyReset', null);
+    window._fbPersist('friend/dailyReset', null);
+  }
+  alert('Tasks cleared!');
+};
+
+window.resetAll = function(){
+  if(!confirm('This will wipe ALL data including calendar. Are you absolutely sure?')) return;
+  if(!confirm('Last chance — this cannot be undone!')) return;
+  localStorage.removeItem('aspire_s');
+  if(window._fbReady && window._fbRemove){
+    window._fbRemove('');
+  }
+  location.reload();
+};
+
+document.getElementById('confirmModal').addEventListener('click', function(e){
+  if(e.target === document.getElementById('confirmModal')) closeConfirm();
+});
+document.getElementById('fixedInput').addEventListener('keydown', function(e){
+  if(e.key==='Enter') window.addFixedTask();
+});
+
+// ── STARS ──
+(function(){
+  var c=document.getElementById('starCanvas'), ctx=c.getContext('2d'), stars=[], W, H;
+  function resize(){ W=c.width=innerWidth; H=c.height=innerHeight; genStars(); }
+  function genStars(){
+    stars=[];
+    for(var i=0;i<100;i++) stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+0.2,baseO:Math.random()*0.4+0.08,speed:Math.random()*0.2+0.03,phase:Math.random()*Math.PI*2,freq:Math.random()*0.02+0.005});
+  }
+  var t=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H); t+=0.016;
+    stars.forEach(function(s){
+      var o=s.baseO*(0.5+0.5*Math.sin(t*s.freq*60+s.phase));
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle='rgba(240,215,150,'+o+')'; ctx.fill();
+      s.y-=s.speed*0.25; if(s.y<-2)s.y=H+2;
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',resize); resize(); draw();
+})();
+
+render();
+});
+</script>
+</body>
+</html>

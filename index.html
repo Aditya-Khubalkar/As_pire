@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AS-pire ✦</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+<div class="mesh"></div>
+
+<!-- TOP BAR: Logo left, buttons right -->
+<div class="top-bar">
+  <div class="logo-wrap" id="logoWrap" title="Double-click to rename">
+    <span class="logo-AS">AS</span><span class="logo-dash">-</span><span class="logo-pire">pire</span>
+  </div>
+  <div class="top-actions">
+    <button class="icon-btn" onclick="window.location.href='calendar.html'" title="Calendar">📅</button>
+    <button class="icon-btn" onclick="window.location.href='settings.html'" title="Settings">⚙️</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="sticky-stage">
+    <div class="sticky" id="stickyCard">
+      <div class="s-hdr">✦ shared note — auto-saves as you type</div>
+      <textarea class="s-body" id="sBody" rows="2" placeholder="Write something inspiring..."></textarea>
+      <div class="s-saved" id="sSaved">saved ✓</div>
+    </div>
+  </div>
+
+  <div class="header">
+    <div class="tagline">accountability &amp; ambition · together</div>
+    <div class="streak-badge" id="streakBadge">🔥 0 day streak</div>
+  </div>
+
+  <div class="demo-banner" id="demoBanner">⚡ Local mode — Firebase not connected yet</div>
+
+  <div class="profile-bar">
+    <span class="profile-lbl">Viewing:</span>
+    <button class="p-btn active" id="btnYou" onclick="switchProfile('you',event)">
+      <div class="p-avatar av-you" id="avYou">A</div>
+      <span id="nameYou">You</span>
+    </button>
+    <button class="p-btn" id="btnFriend" onclick="switchProfile('friend',event)">
+      <div class="p-avatar av-friend" id="avFriend">S</div>
+      <span id="nameFriend">Friend</span>
+    </button>
+    <button class="nudge-btn" onclick="sendNudge()" title="Nudge your friend">⚡</button>
+  </div>
+
+  <div class="friend-notice" id="friendNotice" style="display:none">
+    ✎ &nbsp;Editing <strong id="friendLabel">friend</strong>'s tasks
+  </div>
+
+  <div class="tab-wrap">
+    <div class="tab-pill" id="tabPill"></div>
+    <button class="tab-btn active" id="tDaily" onclick="switchTab('daily')">
+      <span class="tab-icon">☀</span> Daily
+    </button>
+    <button class="tab-btn" id="tWeekly" onclick="switchTab('weekly')">
+      <span class="tab-icon">◈</span> Weekly
+    </button>
+  </div>
+
+  <div class="cdown">
+    <span class="cd-lbl" id="cdLbl">No tasks yet</span>
+    <span class="cd-val"><span class="live-dot"></span><span id="cdVal">—</span></span>
+  </div>
+
+  <div class="prog-wrap">
+    <div class="prog-row">
+      <span class="prog-lbl" id="progLbl">Daily Progress</span>
+      <span class="prog-pct" id="progPct">0%</span>
+    </div>
+    <div class="prog-track">
+      <div class="prog-fill empty" id="progFill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="add-row">
+    <input type="text" class="t-input" id="tInput" placeholder="Add a new task...">
+    <button class="add-btn" id="addBtn" title="Add task">+</button>
+  </div>
+
+  <div class="tasks" id="taskList"></div>
+
+  <div class="all-done" id="allDone">
+    <div class="all-done-title">✦ Every task complete ✦</div>
+    <div class="all-done-sub">you're absolutely unstoppable</div>
+  </div>
+
+</div>
+
+<!-- NAMES MODAL -->
+<div class="overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title">Set Names</div>
+    <div class="m-field"><label>Your name</label><input type="text" class="m-input" id="mYour" placeholder="e.g. Aryan"></div>
+    <div class="m-field"><label>Friend's name</label><input type="text" class="m-input" id="mFriend" placeholder="e.g. Sahil"></div>
+    <div class="m-btns">
+      <button class="m-btn secondary" onclick="closeModal()">Cancel</button>
+      <button class="m-btn primary" onclick="saveNames()">Save ✓</button>
+    </div>
+  </div>
+</div>
+
+<div class="sync-pill">
+  <div class="sync-dot local" id="syncDot"></div>
+  <span id="syncLbl">local</span>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+// ── SOUNDS ──
+const sfx = {
+  click: new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'),
+  done: new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3'),
+  del: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'),
+  nudge: new Audio('https://assets.mixkit.co/active_storage/sfx/2573/2573-preview.mp3')
+};
+
+// ── STATE ──
+function defaultState(){
+  return {
+    names:{you:'A',friend:'S'},
+    quote:'✦ Aspire to be unstoppable',
+    nudge:{to:null, ts:0},
+    reactions:{type:null, ts:0},
+    streak:0, lastActive:0,
+    you:{daily:{},weekly:{},dailyReset:null,weeklyReset:null},
+    friend:{daily:{},weekly:{},dailyReset:null,weeklyReset:null},
+    fixedTasks:{you:[], friend:[]},
+    calendar:{}
+  };
+}
+
+let _state = JSON.parse(localStorage.getItem('aspire_s')||'null') || defaultState();
+if(!_state.fixedTasks) _state.fixedTasks = {you:[], friend:[]};
+if(!_state.calendar) _state.calendar = {};
+
+function persist(path, val){
+  const keys=path.split('/'); let o=_state;
+  for(let i=0;i<keys.length-1;i++){if(!o[keys[i]])o[keys[i]]={};o=o[keys[i]];}
+  o[keys[keys.length-1]]=val;
+  localStorage.setItem('aspire_s', JSON.stringify(_state));
+  renderAll();
+}
+
+function del(path){
+  const keys=path.split('/'); let o=_state;
+  for(let i=0;i<keys.length-1;i++){o=o[keys[i]]||{};}
+  delete o[keys[keys.length-1]];
+  localStorage.setItem('aspire_s', JSON.stringify(_state));
+  renderAll();
+}
+
+// ── FIREBASE ──
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDErNk02qqYnbVFskumgNGch47gJJCzMTA",
+  authDomain: "aspire-2924d.firebaseapp.com",
+  databaseURL: "https://aspire-2924d-default-rtdb.firebaseio.com",
+  projectId: "aspire-2924d",
+  storageBucket: "aspire-2924d.firebasestorage.app",
+  messagingSenderId: "260852889050",
+  appId: "1:260852889050:web:136fe46f8fd42db64b3ce3"
+};
+
+const s1 = document.createElement('script');
+s1.type = 'module';
+s1.textContent = `
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  try {
+    const app = initializeApp(${JSON.stringify(FIREBASE_CONFIG)});
+    const db = getDatabase(app);
+    window._fbPersist = (path, val) => set(ref(db,'aspire/'+path), val);
+    window._fbRemove = (path) => remove(ref(db,'aspire/'+path));
+    onValue(ref(db,'aspire'), (snap) => {
+      if(snap.val()) window._fbStateUpdate(snap.val());
+    });
+    window._fbReady = true;
+  } catch(e){ console.warn('Firebase error:', e); }
+`;
+document.head.appendChild(s1);
+
+let lastNudgeTs = 0;
+let lastReactionTs = 0;
+
+window._fbStateUpdate = function(newState){
+  if(newState.nudge && newState.nudge.ts > lastNudgeTs){
+    lastNudgeTs = newState.nudge.ts;
+    if(newState.nudge.to === profile){
+      document.body.classList.add('shake-screen');
+      sfx.nudge.play().catch(()=>{});
+      setTimeout(()=>document.body.classList.remove('shake-screen'), 500);
+    }
+  }
+  if(newState.reactions && newState.reactions.ts > lastReactionTs){
+    lastReactionTs = newState.reactions.ts;
+    showFloatingEmoji(newState.reactions.type);
+  }
+  _state = newState;
+  if(!_state.fixedTasks) _state.fixedTasks = {you:[], friend:[]};
+  if(!_state.calendar) _state.calendar = {};
+  renderAll();
+};
+
+window._fbReady = false;
+
+function save(path, val){
+  if(window._fbReady && window._fbPersist){
+    window._fbPersist(path, val);
+    const keys=path.split('/'); let o=_state;
+    for(let i=0;i<keys.length-1;i++){if(!o[keys[i]])o[keys[i]]={};o=o[keys[i]];}
+    o[keys[keys.length-1]]=val;
+  } else {
+    persist(path, val);
+  }
+}
+
+function remove2(path){
+  if(window._fbReady && window._fbRemove){
+    window._fbRemove(path);
+    const keys=path.split('/'); let o=_state;
+    for(let i=0;i<keys.length-1;i++){o=o[keys[i]]||{};}
+    delete o[keys[keys.length-1]];
+    renderAll();
+  } else {
+    del(path);
+  }
+}
+
+setInterval(function(){
+  if(window._fbReady){
+    document.getElementById('demoBanner').style.display='none';
+    document.getElementById('syncDot').className='sync-dot live';
+    document.getElementById('syncLbl').textContent='live 🔥';
+  }
+}, 1000);
+
+// ── APP STATE ──
+let profile = 'you';
+let tab = 'daily';
+
+// ── MIDNIGHT RESET HELPERS ──
+function getMidnightTimestamp(){
+  const now = new Date();
+  const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+  return midnight.getTime();
+}
+
+function getTodayKey(){
+  const now = new Date();
+  return now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+}
+
+// ── SAVE TO CALENDAR (archive tasks at end of day) ──
+function archiveTasksToCalendar(p, tasks, dateKey){
+  if(!_state.calendar) _state.calendar = {};
+  if(!_state.calendar[dateKey]) _state.calendar[dateKey] = {};
+  _state.calendar[dateKey][p] = JSON.parse(JSON.stringify(tasks));
+  localStorage.setItem('aspire_s', JSON.stringify(_state));
+  if(window._fbReady && window._fbPersist){
+    window._fbPersist('calendar/'+dateKey+'/'+p, _state.calendar[dateKey][p]);
+  }
+}
+
+// ── CHECK RESETS (midnight for daily, 7 days for weekly) ──
+function checkResets(){
+  var now = Date.now();
+  var today = getTodayKey();
+  ['you','friend'].forEach(function(p){
+    // Daily reset at midnight
+    if(_state[p] && _state[p].dailyReset && now >= _state[p].dailyReset){
+      // Archive yesterday's tasks before clearing
+      var yesterday = new Date(_state[p].dailyReset - 1);
+      var yKey = yesterday.getFullYear()+'-'+String(yesterday.getMonth()+1).padStart(2,'0')+'-'+String(yesterday.getDate()).padStart(2,'0');
+      if(_state[p].daily && Object.keys(_state[p].daily).length > 0){
+        archiveTasksToCalendar(p, _state[p].daily, yKey);
+      }
+      // Carry over incomplete tasks
+      var incomplete = {};
+      if(_state[p].daily){
+        Object.entries(_state[p].daily).forEach(function([k,t]){
+          if(!t.done) incomplete[k] = Object.assign({}, t, {ts: Date.now()});
+        });
+      }
+      _state[p].daily = incomplete;
+      _state[p].dailyReset = getMidnightTimestamp();
+      localStorage.setItem('aspire_s', JSON.stringify(_state));
+      if(window._fbReady && window._fbPersist){
+        window._fbPersist(p+'/daily', _state[p].daily);
+        window._fbPersist(p+'/dailyReset', _state[p].dailyReset);
+      }
+    }
+    // Weekly reset
+    if(_state[p] && _state[p].weeklyReset && now >= _state[p].weeklyReset){
+      _state[p].weekly = {};
+      _state[p].weeklyReset = null;
+      localStorage.setItem('aspire_s', JSON.stringify(_state));
+      if(window._fbReady && window._fbPersist){
+        window._fbPersist(p+'/weekly', {});
+        window._fbPersist(p+'/weeklyReset', null);
+      }
+    }
+  });
+}
+
+// ── INJECT FIXED TASKS for current day if not already present ──
+function injectFixedTasks(){
+  ['you','friend'].forEach(function(p){
+    var fixed = (_state.fixedTasks && _state.fixedTasks[p]) ? _state.fixedTasks[p] : [];
+    fixed.forEach(function(ft){
+      // Check if a task with same fixed id already exists today
+      var existing = _state[p] && _state[p].daily;
+      var alreadyIn = existing && Object.values(existing).some(function(t){ return t.fixedId === ft.id; });
+      if(!alreadyIn){
+        var now = Date.now();
+        var id = 'fx'+ft.id+'_'+now;
+        var by = p === 'you' ? ((_state.names&&_state.names.you)||'A') : ((_state.names&&_state.names.friend)||'S');
+        var task = {text: ft.text, done: false, by: by, ts: now, fixedId: ft.id};
+        if(!_state[p]) _state[p] = {daily:{}, weekly:{}, dailyReset:null, weeklyReset:null};
+        if(!_state[p].daily) _state[p].daily = {};
+        _state[p].daily[id] = task;
+        if(!_state[p].dailyReset) _state[p].dailyReset = getMidnightTimestamp();
+        localStorage.setItem('aspire_s', JSON.stringify(_state));
+        if(window._fbReady && window._fbPersist){
+          window._fbPersist(p+'/daily/'+id, task);
+          window._fbPersist(p+'/dailyReset', _state[p].dailyReset);
+        }
+      }
+    });
+  });
+}
+
+// ── RENDER ──
+function renderAll(){
+  checkResets();
+  injectFixedTasks();
+  const s = _state;
+  const yn = (s.names&&s.names.you) ? s.names.you : 'A';
+  const fn = (s.names&&s.names.friend) ? s.names.friend : 'S';
+
+  document.getElementById('nameYou').textContent = yn;
+  document.getElementById('nameFriend').textContent = fn;
+  document.getElementById('avYou').textContent = yn[0].toUpperCase();
+  document.getElementById('avFriend').textContent = fn[0].toUpperCase();
+  document.getElementById('friendLabel').textContent = fn;
+  document.getElementById('streakBadge').textContent = '🔥 ' + (s.streak||0) + ' day streak';
+
+  const sb = document.getElementById('sBody');
+  if(document.activeElement !== sb) sb.value = s.quote || '';
+
+  document.getElementById('btnYou').classList.toggle('active', profile==='you');
+  document.getElementById('btnFriend').classList.toggle('active', profile==='friend');
+  document.getElementById('friendNotice').style.display = profile==='friend' ? 'flex' : 'none';
+  document.getElementById('tDaily').classList.toggle('active', tab==='daily');
+  document.getElementById('tWeekly').classList.toggle('active', tab==='weekly');
+  document.getElementById('tabPill').classList.toggle('right', tab==='weekly');
+
+  const raw = (s[profile] && s[profile][tab]) ? s[profile][tab] : {};
+  const tasks = Object.entries(raw).map(function(e){ return Object.assign({id:e[0]},e[1]); })
+    .sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+  const done = tasks.filter(function(t){ return t.done; }).length;
+  const pct = tasks.length ? Math.round(done/tasks.length*100) : 0;
+
+  const rk = tab+'Reset';
+  const rt = s[profile] ? s[profile][rk] : null;
+  const nowMs = Date.now();
+  const allComplete = tasks.length > 0 && done === tasks.length;
+  if(allComplete){
+    document.getElementById('cdLbl').textContent = 'All done! ✦';
+    document.getElementById('cdVal').textContent = '0s';
+  } else if(rt && rt > nowMs){
+    document.getElementById('cdLbl').textContent = tab==='daily' ? 'Resets at midnight' : 'Resets in';
+    document.getElementById('cdVal').textContent = fmt(rt - nowMs);
+  } else {
+    document.getElementById('cdLbl').textContent = 'No tasks yet';
+    document.getElementById('cdVal').textContent = '—';
+  }
+
+  document.getElementById('progPct').textContent = pct + '%';
+  document.getElementById('progLbl').textContent = tab.toUpperCase() + ' PROGRESS';
+  const fill = document.getElementById('progFill');
+  fill.style.width = pct + '%';
+  fill.classList.toggle('empty', pct === 0);
+
+  const list = document.getElementById('taskList');
+  if(!tasks.length){
+    list.innerHTML = '<div class="empty"><div class="empty-icon">✦</div><div class="empty-txt">no tasks yet — add one above</div></div>';
+  } else {
+    // Render WITHOUT animation-delay on existing tasks to prevent blinking
+    list.innerHTML = tasks.map(function(t){
+      var isFixed = t.fixedId ? ' fixed-task' : '';
+      return '<div class="task '+(t.done?'done':'')+isFixed+'" data-id="'+t.id+'">'
+        +'<div class="chk '+(t.done?'on':'')+'" onclick="toggleTask(\''+t.id+'\')"><span class="chk-mark">✓</span></div>'
+        +'<div class="task-txt">'+esc(t.text)+(t.fixedId?'<span class="fixed-badge">📌</span>':'')+'</div>'
+        +'<span class="task-by">'+esc(t.by||'')+'</span>'
+        +'<button class="del-btn" onclick="deleteTask(\''+t.id+'\')">×</button>'
+        +'</div>';
+    }).join('');
+  }
+
+  document.getElementById('allDone').classList.toggle('show', tasks.length>0 && done===tasks.length);
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function fmt(ms){
+  var s=Math.floor(ms/1000), h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
+  if(h>0) return h+'h '+m+'m';
+  if(m>0) return m+'m '+sec+'s';
+  return sec+'s';
+}
+
+// ── ACTIONS ──
+window.switchProfile = function(p, e){
+  if(e){ addRipple(e.currentTarget, e); }
+  profile = p; renderAll();
+};
+
+window.switchTab = function(t){ tab = t; renderAll(); };
+
+window.addTask = function(){
+  var inp = document.getElementById('tInput');
+  var text = inp.value.trim();
+  if(!text) return;
+  var now = Date.now();
+  var rk = tab+'Reset';
+  // Set reset time: for daily, always midnight; for weekly, 7 days from now
+  if(!(_state[profile]&&_state[profile][rk])){
+    var resetTime = tab==='daily' ? getMidnightTimestamp() : now + 7*86400000;
+    save(profile+'/'+rk, resetTime);
+  }
+  var id = 't'+now+Math.random().toString(36).slice(2,5);
+  var by = profile==='you' ? ((_state.names&&_state.names.you)||'A') : ((_state.names&&_state.names.friend)||'S');
+  save(profile+'/'+tab+'/'+id, {text:text, done:false, by:by, ts:now});
+  inp.value = '';
+  // Just flash border briefly — no re-animation of whole list
+  inp.style.borderColor = 'rgba(114,201,160,0.65)';
+  setTimeout(function(){ inp.style.borderColor=''; }, 600);
+  // Animate only the newly added task
+  setTimeout(function(){
+    var newTask = document.querySelector('.task[data-id="'+id+'"]');
+    if(newTask){
+      newTask.classList.add('task-new');
+      setTimeout(function(){ newTask.classList.remove('task-new'); }, 600);
+    }
+  }, 50);
+  updateStreak();
+};
+
+window.toggleTask = function(id){
+  var t = _state[profile]&&_state[profile][tab]&&_state[profile][tab][id];
+  if(!t) return;
+  sfx.click.play().catch(()=>{});
+  save(profile+'/'+tab+'/'+id+'/done', !t.done);
+  if(!t.done){
+    setTimeout(function(){
+      var tasks = Object.values((_state[profile]&&_state[profile][tab])||{});
+      if(tasks.length && tasks.every(function(x){ return x.done; })){
+        shootConfetti();
+        sfx.done.play().catch(()=>{});
+        save(profile+'/'+(tab+'Reset'), Date.now());
+      }
+    }, 200);
+  }
+  renderAll();
+};
+
+window.deleteTask = function(id){
+  sfx.del.play().catch(()=>{});
+  remove2(profile+'/'+tab+'/'+id);
+  var rem = Object.keys((_state[profile]&&_state[profile][tab])||{}).filter(function(k){ return k!==id; });
+  if(!rem.length) save(profile+'/'+(tab+'Reset'), null);
+};
+
+window.sendNudge = function(){
+  let targetPerson = profile;
+  save('nudge', {to: targetPerson, ts: Date.now()});
+  addRipple(document.querySelector('.nudge-btn'), {clientX: window.innerWidth/2, clientY: window.innerHeight/2});
+};
+
+function updateStreak(){
+  let now = new Date();
+  let today = now.toDateString();
+  if(_state.lastActive !== today){
+    save('lastActive', today);
+    let s = _state.streak || 0;
+    save('streak', s + 1);
+  }
+}
+
+function showFloatingEmoji(char){
+  const el = document.createElement('div');
+  el.className = 'float-emoji';
+  el.textContent = char;
+  el.style.left = Math.random() * 80 + 10 + 'vw';
+  el.style.bottom = '10vh';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2000);
+}
+
+// ── KEYBOARD REACTIONS ──
+document.addEventListener('keydown', function(e){
+  if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  let char = null;
+  if(e.key.toLowerCase() === 'l') char = '❤️';
+  if(e.key.toLowerCase() === 'f') char = '🔥';
+  if(e.key.toLowerCase() === 't') char = '👍';
+  if(char){
+    save('reactions', {type: char, ts: Date.now()});
+    showFloatingEmoji(char);
+  }
+});
+
+// ── STICKY NOTE ──
+var quoteTimer = null;
+document.getElementById('sBody').addEventListener('input', function(){
+  clearTimeout(quoteTimer);
+  quoteTimer = setTimeout(function(){
+    save('quote', document.getElementById('sBody').value);
+    var el = document.getElementById('sSaved');
+    el.classList.add('show');
+    setTimeout(function(){ el.classList.remove('show'); }, 1500);
+  }, 500);
+});
+
+// ── ADD BUTTON & ENTER KEY ──
+document.getElementById('addBtn').addEventListener('click', window.addTask);
+document.getElementById('tInput').addEventListener('keydown', function(e){
+  if(e.key === 'Enter') window.addTask();
+});
+
+// ── NAMES MODAL ──
+document.getElementById('logoWrap').addEventListener('dblclick', openModal);
+document.getElementById('modal').addEventListener('click', function(e){
+  if(e.target === document.getElementById('modal')) closeModal();
+});
+
+function openModal(){
+  document.getElementById('mYour').value = (_state.names&&_state.names.you)||'';
+  document.getElementById('mFriend').value = (_state.names&&_state.names.friend)||'';
+  document.getElementById('modal').classList.add('show');
+}
+window.closeModal = function(){ document.getElementById('modal').classList.remove('show'); };
+window.saveNames = function(){
+  var y = document.getElementById('mYour').value.trim() || 'A';
+  var f = document.getElementById('mFriend').value.trim() || 'S';
+  save('names/you', y); save('names/friend', f);
+  closeModal();
+};
+
+// ── RIPPLE ──
+function addRipple(btn, e){
+  var r = document.createElement('span');
+  var rect = btn.getBoundingClientRect();
+  var sz = Math.max(rect.width,rect.height)*2.5;
+  r.className='ripple';
+  r.style.cssText='width:'+sz+'px;height:'+sz+'px;left:'+(e.clientX-rect.left-sz/2)+'px;top:'+(e.clientY-rect.top-sz/2)+'px;';
+  btn.appendChild(r);
+  setTimeout(function(){ r.remove(); }, 700);
+}
+
+// ── CONFETTI ──
+function shootConfetti(){
+  var cols=['#d4a853','#f5d07a','#a48de0','#72c9a0','#e06b6b','#ffe9a0','#fff','#c4b5f4'];
+  for(var i=0;i<65;i++){
+    (function(i){
+      setTimeout(function(){
+        var el=document.createElement('div'); el.className='cf';
+        var w=5+Math.random()*10, h=w*(0.3+Math.random()*1.5);
+        el.style.cssText='left:'+(3+Math.random()*94)+'vw;top:'+(Math.random()*20)+'vh;width:'+w+'px;height:'+h+'px;background:'+cols[Math.floor(Math.random()*cols.length)]+';border-radius:'+(Math.random()>0.4?'50%':'2px')+';animation-duration:'+(1.1+Math.random()*1.6)+'s;transform:rotate('+(Math.random()*360)+'deg);';
+        document.body.appendChild(el);
+        setTimeout(function(){ el.remove(); }, 3500);
+      }, i*28);
+    })(i);
+  }
+}
+
+// ── STARS ──
+(function(){
+  var c=document.getElementById('starCanvas'), ctx=c.getContext('2d'), stars=[], W, H;
+  function resize(){ W=c.width=innerWidth; H=c.height=innerHeight; genStars(); }
+  function genStars(){
+    stars=[];
+    for(var i=0;i<140;i++) stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.3+0.2,baseO:Math.random()*0.55+0.1,speed:Math.random()*0.25+0.04,phase:Math.random()*Math.PI*2,freq:Math.random()*0.02+0.005});
+  }
+  var t=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H); t+=0.016;
+    stars.forEach(function(s){
+      var o=s.baseO*(0.5+0.5*Math.sin(t*s.freq*60+s.phase));
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle='rgba(240,215,150,'+o+')'; ctx.fill();
+      s.y-=s.speed*0.25; if(s.y<-2)s.y=H+2;
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',resize); resize(); draw();
+})();
+
+// ── CURSOR SPARKS ──
+(function(){
+  var last=0;
+  document.addEventListener('mousemove',function(e){
+    if(Date.now()-last<50)return; last=Date.now();
+    var el=document.createElement('div'); el.className='cursor-spark';
+    el.style.left=e.clientX+'px'; el.style.top=e.clientY+'px';
+    el.style.width=el.style.height=(3+Math.random()*5)+'px';
+    var hues=['#d4a853','#f5d07a','#a48de0','#72c9a0'];
+    el.style.background=hues[Math.floor(Math.random()*hues.length)];
+    el.style.animationDuration=(0.4+Math.random()*0.4)+'s';
+    document.body.appendChild(el);
+    setTimeout(function(){ el.remove(); },800);
+  });
+})();
+
+// ── FLOATING PARTICLES ──
+(function(){
+  var cols=['rgba(212,168,83,','rgba(164,141,224,','rgba(114,201,160,'];
+  setInterval(function(){
+    var el=document.createElement('div'); el.className='fp';
+    var sz=1.5+Math.random()*4;
+    el.style.cssText='width:'+sz+'px;height:'+sz+'px;left:'+(Math.random()*100)+'vw;bottom:-10px;background:'+cols[Math.floor(Math.random()*3)]+(0.15+Math.random()*0.4)+');animation-duration:'+(7+Math.random()*10)+'s;animation-delay:'+(Math.random()*2)+'s;';
+    document.body.appendChild(el);
+    setTimeout(function(){ el.remove(); },22000);
+  },900);
+})();
+
+// ── INITIAL RENDER & TIMER ──
+renderAll();
+setInterval(renderAll, 1000);
+
+}); // end DOMContentLoaded
+</script>
+</body>
+</html>
