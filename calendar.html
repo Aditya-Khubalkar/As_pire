@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendar — AS-pire ✦</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+<div class="mesh"></div>
+
+<div class="top-bar">
+  <a href="index.html" class="logo-wrap">
+    <span class="logo-AS">AS</span><span class="logo-dash">-</span><span class="logo-pire">pire</span>
+  </a>
+  <div class="top-actions">
+    <a href="settings.html" class="icon-btn" title="Settings">⚙️</a>
+    <a href="index.html" class="back-btn">← Back</a>
+  </div>
+</div>
+
+<div class="calendar-wrap">
+
+  <div class="cal-header">
+    <div>
+      <div class="page-title">Calendar</div>
+      <div class="page-subtitle">Task history &amp; planning for A &amp; S</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+      <div class="cal-month-label" id="calMonthLabel"></div>
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+        <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="cal-grid-header">
+    <div class="cal-day-name">Sun</div>
+    <div class="cal-day-name">Mon</div>
+    <div class="cal-day-name">Tue</div>
+    <div class="cal-day-name">Wed</div>
+    <div class="cal-day-name">Thu</div>
+    <div class="cal-day-name">Fri</div>
+    <div class="cal-day-name">Sat</div>
+  </div>
+
+  <div class="cal-grid" id="calGrid"></div>
+
+  <div class="cal-detail" id="calDetail">
+    <div class="cal-detail-header">
+      <div class="cal-detail-date" id="calDetailDate"></div>
+      <button class="cal-detail-close" onclick="closeDetail()">×</button>
+    </div>
+    <div id="calDetailContent"></div>
+
+    <!-- Add future tasks section (shown only for future dates) -->
+    <div class="cal-future-add" id="futureAddSection" style="display:none;">
+      <div class="cal-future-label">📅 Schedule a task for this date</div>
+      <div class="cal-future-row">
+        <input type="text" class="t-input" id="futureInput" placeholder="Task for this day...">
+        <select class="who-select" id="futureWho">
+          <option value="you">A</option>
+          <option value="friend">S</option>
+        </select>
+        <button class="add-btn" onclick="addFutureTask()" title="Schedule">+</button>
+      </div>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);margin-top:8px;">
+        This task will automatically appear on that day's Daily section.
+      </p>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div style="margin-top:22px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted2);">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--gold);"></div> A tasks
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted2);">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--red2);"></div> S tasks
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted2);">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--lav);"></div> Planned
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted2);">✦ Click any date to view or plan tasks</div>
+  </div>
+
+</div>
+
+<div class="sync-pill">
+  <div class="sync-dot local" id="syncDot"></div>
+  <span id="syncLbl">local</span>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+
+const FIREBASE_CONFIG = {
+  apiKey:"AIzaSyDErNk02qqYnbVFskumgNGch47gJJCzMTA",
+  authDomain:"aspire-2924d.firebaseapp.com",
+  databaseURL:"https://aspire-2924d-default-rtdb.firebaseio.com",
+  projectId:"aspire-2924d",
+  storageBucket:"aspire-2924d.firebasestorage.app",
+  messagingSenderId:"260852889050",
+  appId:"1:260852889050:web:136fe46f8fd42db64b3ce3"
+};
+const fs=document.createElement('script');fs.type='module';
+fs.textContent=`
+  import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import{getDatabase,ref,set,onValue}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  try{
+    const app=initializeApp(${JSON.stringify(FIREBASE_CONFIG)});
+    const db=getDatabase(app);
+    window._fbPersist=(path,val)=>set(ref(db,'aspire/'+path),val);
+    onValue(ref(db,'aspire'),(snap)=>{if(snap.val())window._fbStateUpdate(snap.val());});
+    window._fbReady=true;
+  }catch(e){console.warn('Firebase:',e);}
+`;
+document.head.appendChild(fs);
+window._fbReady=false;
+
+let _state=JSON.parse(localStorage.getItem('aspire_s')||'null')||{names:{you:'A',friend:'S'},calendar:{},futureTasks:{}};
+if(!_state.calendar) _state.calendar={};
+if(!_state.futureTasks) _state.futureTasks={};
+
+window._fbStateUpdate=function(ns){
+  _state=ns;
+  if(!_state.calendar) _state.calendar={};
+  if(!_state.futureTasks) _state.futureTasks={};
+  renderCalendar();
+  if(selectedDate) showDetail(selectedDate);
+};
+
+setInterval(function(){
+  if(window._fbReady){
+    document.getElementById('syncDot').className='sync-dot live';
+    document.getElementById('syncLbl').textContent='live 🔥';
+  }
+},1000);
+
+function getTodayKey(){
+  var n=new Date();
+  return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+}
+function isFuture(dateKey){ return dateKey > getTodayKey(); }
+function isToday(dateKey){ return dateKey === getTodayKey(); }
+
+// Get all data for a date: archived + active today + future planned
+function getDateData(dateKey){
+  var data={you:{},friend:{},future:{you:{},friend:{}}};
+
+  // Calendar archive
+  if(_state.calendar&&_state.calendar[dateKey]){
+    if(_state.calendar[dateKey].you) Object.assign(data.you,_state.calendar[dateKey].you);
+    if(_state.calendar[dateKey].friend) Object.assign(data.friend,_state.calendar[dateKey].friend);
+  }
+
+  // Today: also show live tasks
+  if(isToday(dateKey)){
+    if(_state.you&&_state.you.daily) Object.assign(data.you,_state.you.daily);
+    if(_state.friend&&_state.friend.daily) Object.assign(data.friend,_state.friend.daily);
+  }
+
+  // Future planned tasks
+  if(_state.futureTasks&&_state.futureTasks[dateKey]){
+    if(_state.futureTasks[dateKey].you) data.future.you=_state.futureTasks[dateKey].you;
+    if(_state.futureTasks[dateKey].friend) data.future.friend=_state.futureTasks[dateKey].friend;
+  }
+
+  return data;
+}
+
+var today=new Date();
+var currentYear=today.getFullYear(), currentMonth=today.getMonth();
+var selectedDate=null;
+
+function changeMonth(dir){
+  currentMonth+=dir;
+  if(currentMonth>11){currentMonth=0;currentYear++;}
+  if(currentMonth<0){currentMonth=11;currentYear--;}
+  selectedDate=null;
+  closeDetail();
+  renderCalendar();
+}
+window.changeMonth=changeMonth;
+
+var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function renderCalendar(){
+  document.getElementById('calMonthLabel').textContent=MONTHS[currentMonth]+' '+currentYear;
+  var firstDay=new Date(currentYear,currentMonth,1).getDay();
+  var daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
+  var todayKey=getTodayKey();
+
+  var html='';
+  for(var i=0;i<firstDay;i++) html+='<div class="cal-cell cal-empty"></div>';
+
+  for(var d=1;d<=daysInMonth;d++){
+    var dk=currentYear+'-'+String(currentMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var data=getDateData(dk);
+    var isT=dk===todayKey;
+    var isSel=dk===selectedDate;
+    var hasA=Object.keys(data.you).length>0;
+    var hasS=Object.keys(data.friend).length>0;
+    var hasFut=Object.keys(data.future.you).length>0||Object.keys(data.future.friend).length>0;
+    var hasAny=hasA||hasS;
+
+    var cls='cal-cell'+(isT?' cal-today':'')+(hasAny?' has-data':'')+(hasFut&&!hasAny?' has-future':'')+(isSel?' selected':'');
+    var dots='';
+    if(hasA){
+      var aDone=Object.values(data.you).filter(function(t){return t.done;}).length;
+      var aTotal=Math.min(Object.values(data.you).length,4);
+      for(var j=0;j<aTotal;j++) dots+='<div class="cal-dot a-dot"></div>';
+    }
+    if(hasS){
+      var sTotal=Math.min(Object.values(data.friend).length,4);
+      for(var j=0;j<sTotal;j++) dots+='<div class="cal-dot s-dot"></div>';
+    }
+    if(hasFut) dots+='<div class="cal-dot f-dot"></div>';
+
+    html+='<div class="'+cls+'" onclick="selectDate(\''+dk+'\')">'
+      +'<div class="cal-date">'+d+(isT?' ●':'')+'</div>'
+      +(dots?'<div class="cal-dots">'+dots+'</div>':'')
+      +'</div>';
+  }
+  document.getElementById('calGrid').innerHTML=html;
+}
+
+window.selectDate=function(dk){
+  selectedDate=dk;
+  renderCalendar();
+  showDetail(dk);
+};
+
+function showDetail(dk){
+  var yn=(_state.names&&_state.names.you)||'A';
+  var fn=(_state.names&&_state.names.friend)||'S';
+  var parts=dk.split('-');
+  var MONTHS_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('calDetailDate').textContent=MONTHS_SHORT[parseInt(parts[1])-1]+' '+parseInt(parts[2])+', '+parts[0];
+
+  var data=getDateData(dk);
+  var fut=isFuture(dk);
+
+  function userBlock(tasks,futureTasks,label,cls){
+    var html='<div class="cal-user-section"><div class="cal-user-label '+cls+'">'+label+'</div>';
+    var list=Object.values(tasks);
+    var futList=Object.values(futureTasks||{});
+    if(!list.length&&!futList.length){
+      html+='<div class="no-tasks-cal">No tasks recorded</div>';
+    } else {
+      list.forEach(function(t){
+        html+='<div class="cal-task-row'+(t.done?' done':'')+'">'
+          +'<div class="ct-chk">'+(t.done?'✓':'')+'</div>'
+          +'<div class="ct-text">'+esc(t.text)+'</div></div>';
+      });
+      futList.forEach(function(t){
+        html+='<div class="cal-task-row" style="border:1px dashed var(--lav);opacity:0.8;">'
+          +'<div class="ct-chk">📅</div>'
+          +'<div class="ct-text" style="color:var(--lav);">'+esc(t.text)+' <span style="font-size:10px;font-family:\'JetBrains Mono\',monospace;">(planned)</span></div>'
+          +'<button onclick="deleteFutureTask(\''+dk+'\',\''+(t.who||'you')+'\',\''+t.id+'\')" style="background:none;border:none;color:var(--muted2);cursor:pointer;font-size:14px;padding:0 4px;">×</button>'
+          +'</div>';
+      });
+    }
+    html+='</div>';
+    return html;
+  }
+
+  var futYou=data.future.you||{};
+  var futFriend=data.future.friend||{};
+  document.getElementById('calDetailContent').innerHTML=
+    userBlock(data.you, futYou, yn, 'a-label')+
+    userBlock(data.friend, futFriend, fn, 's-label');
+
+  // Show future add section for non-past dates
+  var isP=!fut&&!isToday(dk);
+  document.getElementById('futureAddSection').style.display=(fut||isToday(dk))?'block':'none';
+
+  // Update who select labels
+  document.getElementById('futureWho').innerHTML=
+    '<option value="you">'+yn+'</option><option value="friend">'+fn+'</option>';
+
+  document.getElementById('calDetail').classList.add('show');
+}
+
+window.closeDetail=function(){
+  selectedDate=null;
+  document.getElementById('calDetail').classList.remove('show');
+  renderCalendar();
+};
+
+// ══ ADD FUTURE TASK ══
+window.addFutureTask=function(){
+  if(!selectedDate) return;
+  var text=document.getElementById('futureInput').value.trim();
+  if(!text) return;
+  var who=document.getElementById('futureWho').value;
+  if(!_state.futureTasks) _state.futureTasks={};
+  if(!_state.futureTasks[selectedDate]) _state.futureTasks[selectedDate]={};
+  if(!_state.futureTasks[selectedDate][who]) _state.futureTasks[selectedDate][who]={};
+  var id='fp'+Date.now()+Math.random().toString(36).slice(2,4);
+  var by=who==='you'?((_state.names&&_state.names.you)||'A'):((_state.names&&_state.names.friend)||'S');
+  var task={id:id,text:text,by:by,who:who,ts:Date.now()};
+  _state.futureTasks[selectedDate][who][id]=task;
+  localStorage.setItem('aspire_s',JSON.stringify(_state));
+  if(window._fbReady&&window._fbPersist){
+    window._fbPersist('futureTasks/'+selectedDate+'/'+who+'/'+id,task);
+  }
+  document.getElementById('futureInput').value='';
+  renderCalendar();
+  showDetail(selectedDate);
+};
+
+window.deleteFutureTask=function(dk,who,id){
+  if(!_state.futureTasks||!_state.futureTasks[dk]||!_state.futureTasks[dk][who]) return;
+  delete _state.futureTasks[dk][who][id];
+  localStorage.setItem('aspire_s',JSON.stringify(_state));
+  if(window._fbReady&&window._fbPersist){
+    // set to null removes in Firebase
+    window._fbPersist('futureTasks/'+dk+'/'+who+'/'+id,null);
+  }
+  renderCalendar();
+  showDetail(dk);
+};
+
+document.getElementById('futureInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter') window.addFutureTask();
+});
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ══ STARS ══
+(function(){
+  var c=document.getElementById('starCanvas'),ctx=c.getContext('2d'),stars=[],W,H;
+  function resize(){W=c.width=innerWidth;H=c.height=innerHeight;genStars();}
+  function genStars(){stars=[];for(var i=0;i<100;i++)stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+0.2,baseO:Math.random()*0.4+0.06,speed:Math.random()*0.2+0.03,phase:Math.random()*Math.PI*2,freq:Math.random()*0.02+0.005});}
+  var t=0;
+  function draw(){ctx.clearRect(0,0,W,H);t+=0.016;stars.forEach(function(s){var o=s.baseO*(0.5+0.5*Math.sin(t*s.freq*60+s.phase));ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='rgba(255,180,100,'+o+')';ctx.fill();s.y-=s.speed*0.22;if(s.y<-2)s.y=H+2;});requestAnimationFrame(draw);}
+  window.addEventListener('resize',resize);resize();draw();
+})();
+
+renderCalendar();
+setInterval(renderCalendar,30000);
+});
+</script>
+</body>
+</html>
