@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendar — AS-pire ✦</title>
+<link rel="stylesheet" href="styles.css">
+<script src="shared.js"></script>
+</head>
+<body>
+<canvas id="starCanvas"></canvas>
+
+<div class="topbar">
+  <a class="topbar-logo" href="index.html">AS<em>-pire</em></a>
+  <div class="topbar-actions">
+    <a class="icon-btn" href="settings.html" title="Settings">⚙️</a>
+    <a class="icon-btn" href="index.html" title="Home">🏠</a>
+  </div>
+</div>
+
+<div class="cal-wrap">
+
+  <div class="page-header" style="text-align:left;padding:28px 0 20px;">
+    <div class="tagline">📅 task history</div>
+  </div>
+
+  <!-- CALENDAR HEADER -->
+  <div class="cal-header">
+    <div class="cal-month" id="calMonthLabel">March 2026</div>
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+      <button class="cal-nav-btn" onclick="goToday()">Today</button>
+      <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+    </div>
+  </div>
+
+  <!-- CALENDAR GRID -->
+  <div class="cal-grid" id="calGrid"></div>
+
+  <!-- SELECTED DAY DETAIL -->
+  <div id="dayDetail"></div>
+
+</div>
+
+<div class="sync-pill">
+  <div class="sync-dot local" id="syncDot"></div>
+  <span id="syncLbl">local</span>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+
+let _state = JSON.parse(localStorage.getItem('aspire_s')||'null') || defaultState();
+if(!_state.you) _state=defaultState();
+if(!_state.calendar) _state.calendar={};
+
+window._fbReady=false;
+const fbScript=document.createElement('script');fbScript.type='module';
+fbScript.textContent=`import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";import{getDatabase,ref,onValue}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";try{const app=initializeApp(window.FB_CONFIG);const db=getDatabase(app);onValue(ref(db,'aspire'),(snap)=>{if(snap.val()){_state=snap.val();if(!_state.calendar)_state.calendar={};renderCalendar();}});window._fbReady=true;}catch(e){console.warn(e);}`;
+document.head.appendChild(fbScript);
+setInterval(()=>{if(window._fbReady){document.getElementById('syncDot').className='sync-dot live';document.getElementById('syncLbl').textContent='live 🔥';}},1000);
+
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+let viewYear=new Date().getFullYear();
+let viewMonth=new Date().getMonth();
+let selectedDate=null;
+
+function renderCalendar(){
+  const yn=(_state.names&&_state.names.you)||'A';
+  const fn=(_state.names&&_state.names.friend)||'S';
+  const today=todayStr();
+  const cal=_state.calendar||{};
+
+  document.getElementById('calMonthLabel').textContent=MONTHS[viewMonth]+' '+viewYear;
+
+  const grid=document.getElementById('calGrid');
+  let html='';
+
+  // Day name headers
+  DAYS.forEach(function(d){ html+='<div class="cal-day-name">'+d+'</div>'; });
+
+  // First day of month
+  const firstDay=new Date(viewYear,viewMonth,1).getDay();
+  // Days in month
+  const daysInMonth=new Date(viewYear,viewMonth+1,0).getDate();
+
+  // Empty cells before first day
+  for(let i=0;i<firstDay;i++) html+='<div class="cal-day empty"></div>';
+
+  // Day cells
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr=viewYear+'-'+String(viewMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isToday=dateStr===today;
+    const isSel=dateStr===selectedDate;
+    const dayData=cal[dateStr];
+    const hasData=!!dayData;
+    const youTasks=dayData&&dayData.you?Object.values(dayData.you):[];
+    const friendTasks=dayData&&dayData.friend?Object.values(dayData.friend):[];
+    const youDone=youTasks.filter(t=>t.done).length;
+    const friendDone=friendTasks.filter(t=>t.done).length;
+
+    let cls='cal-day';
+    if(isToday) cls+=' today';
+    if(isSel) cls+=' selected';
+    if(hasData) cls+=' has-data';
+
+    html+='<div class="'+cls+'" onclick="selectDay(\''+dateStr+'\')">'
+      +'<div class="cal-day-num">'+d+'</div>';
+    if(hasData){
+      html+='<div class="cal-day-dots">';
+      if(youTasks.length) html+='<div class="cal-dot you-dot" title="'+yn+': '+youDone+'/'+youTasks.length+'"></div>';
+      if(friendTasks.length) html+='<div class="cal-dot friend-dot" title="'+fn+': '+friendDone+'/'+friendTasks.length+'"></div>';
+      html+='</div>';
+    }
+    html+='</div>';
+  }
+
+  grid.innerHTML=html;
+
+  // Also show today's current tasks if selected date is today
+  if(selectedDate) renderDayDetail(selectedDate);
+}
+
+window.selectDay=function(dateStr){
+  selectedDate=dateStr;
+  renderCalendar();
+  renderDayDetail(dateStr);
+};
+
+function renderDayDetail(dateStr){
+  const yn=(_state.names&&_state.names.you)||'A';
+  const fn=(_state.names&&_state.names.friend)||'S';
+  const cal=_state.calendar||{};
+  const today=todayStr();
+  const detail=document.getElementById('dayDetail');
+
+  // For today, show live tasks; for past days, show archived
+  let youTasks, friendTasks;
+  if(dateStr===today){
+    youTasks=Object.entries((_state.you&&_state.you.daily)||{}).map(([id,t])=>Object.assign({id},t));
+    friendTasks=Object.entries((_state.friend&&_state.friend.daily)||{}).map(([id,t])=>Object.assign({id},t));
+  } else {
+    const dayData=cal[dateStr];
+    if(!dayData){
+      detail.innerHTML='<div class="day-detail"><div class="no-data">No data for this date. Tasks are saved to calendar when the day resets at midnight.</div></div>';
+      return;
+    }
+    youTasks=Object.entries(dayData.you||{}).map(([id,t])=>Object.assign({id},t));
+    friendTasks=Object.entries(dayData.friend||{}).map(([id,t])=>Object.assign({id},t));
+  }
+
+  const d=new Date(dateStr+'T12:00:00');
+  const label=d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  function taskListHtml(tasks){
+    if(!tasks.length) return '<div class="no-data" style="padding:10px 0 4px;text-align:left;">No tasks</div>';
+    return tasks.sort((a,b)=>(a.ts||0)-(b.ts||0)).map(function(t){
+      const icon=t.done?'<span class="day-task-done">✓</span>':'<span class="day-task-pending">○</span>';
+      const txtCls=t.done?'day-task-txt-done':'';
+      return '<div class="day-task-item">'+icon+'<span class="'+txtCls+'">'+esc(t.text)+'</span>'+(t.carried?'<span style="font-size:9px;color:var(--rose);margin-left:6px;font-family:JetBrains Mono,monospace;">↩carried</span>':'')+'</div>';
+    }).join('');
+  }
+
+  detail.innerHTML='<div class="day-detail">'
+    +'<div class="day-detail-title">📅 '+label+'</div>'
+    +'<div class="day-user-section">'
+      +'<div class="day-user-label you-lbl">● '+yn+'\'s tasks</div>'
+      +taskListHtml(youTasks)
+    +'</div>'
+    +'<div class="day-user-section">'
+      +'<div class="day-user-label friend-lbl">● '+fn+'\'s tasks</div>'
+      +taskListHtml(friendTasks)
+    +'</div>'
+  +'</div>';
+
+  detail.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+window.changeMonth=function(dir){
+  viewMonth+=dir;
+  if(viewMonth<0){viewMonth=11;viewYear--;}
+  if(viewMonth>11){viewMonth=0;viewYear++;}
+  renderCalendar();
+};
+window.goToday=function(){viewYear=new Date().getFullYear();viewMonth=new Date().getMonth();selectedDate=todayStr();renderCalendar();};
+
+// Select today by default
+selectedDate=todayStr();
+
+initStars();initCursorSparks();
+renderCalendar();
+});
+</script>
+</body>
+</html>
