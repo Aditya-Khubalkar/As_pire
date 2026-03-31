@@ -4,127 +4,83 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Settings — AS-pire ✦</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-<script src="theme.js"></script>
 <link rel="stylesheet" href="styles.css">
+<script src="shared.js"></script>
 </head>
 <body>
-
 <canvas id="starCanvas"></canvas>
-<div class="mesh"></div>
 
-<div class="top-bar">
-  <a href="index.html" class="logo-wrap">
-    <span class="logo-AS">AS</span><span class="logo-dash">-</span><span class="logo-pire">pire</span>
-  </a>
-  <div class="top-actions">
-    <a href="calendar.html" class="icon-btn" title="Calendar">📅</a>
-    <a href="index.html" class="back-btn">← Back</a>
+<div class="topbar">
+  <a class="topbar-logo" href="index.html">AS<em>-pire</em></a>
+  <div class="topbar-actions">
+    <a class="icon-btn" href="calendar.html" title="Calendar">📅</a>
+    <a class="icon-btn" href="index.html" title="Home">🏠</a>
   </div>
 </div>
 
-<div class="wrap">
+<div class="settings-wrap">
 
-  <div class="page-header">
-    <div class="page-title">Settings</div>
-    <div class="page-subtitle">Customize your experience</div>
+  <div class="page-header" style="text-align:left;padding:28px 0 20px;">
+    <div class="tagline">⚙️ settings</div>
   </div>
 
   <!-- NAMES -->
   <div class="settings-section">
-    <div class="section-label">User Names</div>
-    <div class="setting-card">
-      <div class="m-field">
-        <label>A — Your Name</label>
-        <input type="text" class="m-input" id="nameA" placeholder="e.g. Aryan">
-      </div>
-      <div class="m-field" style="margin-top:12px;">
-        <label>S — Friend's Name</label>
-        <input type="text" class="m-input" id="nameS" placeholder="e.g. Sahil">
-      </div>
-      <div class="m-btns" style="margin-top:16px;">
-        <button class="m-btn primary" id="saveNamesBtn" onclick="saveNames()">Save Names ✓</button>
-      </div>
+    <div class="settings-section-title">👤 Names</div>
+    <div class="m-field"><label>Your name</label><input type="text" class="m-input" id="sYourName" placeholder="e.g. Aryan"></div>
+    <div class="m-field"><label>Friend's name</label><input type="text" class="m-input" id="sFriendName" placeholder="e.g. Sahil"></div>
+    <div style="margin-top:16px;">
+      <button class="m-btn primary" onclick="saveNamesSettings()" style="max-width:160px;padding:11px 20px;">Save Names ✓</button>
     </div>
   </div>
 
-  <!-- FIXED DAILY TASKS -->
+  <!-- FIXED TASKS -->
   <div class="settings-section">
-    <div class="section-label">Fixed Daily Tasks</div>
-    <div class="setting-card">
-      <div class="setting-info" style="margin-bottom:8px;">
-        <div class="s-name">📌 Auto-Added Daily Tasks</div>
-        <div class="s-desc">These tasks appear automatically in the Daily section every day for the chosen user</div>
-      </div>
+    <div class="settings-section-title">📌 Fixed Daily Tasks</div>
+    <p style="font-size:13px;color:var(--muted2);margin-bottom:18px;line-height:1.5;">These tasks automatically appear in the daily section every day for the selected person.</p>
 
-      <div class="fixed-task-list" id="fixedTaskList"></div>
+    <!-- Existing fixed tasks -->
+    <div id="fixedTaskList"></div>
 
-      <div class="add-fixed-row">
-        <input type="text" class="t-input" id="fixedInput" placeholder="Add a fixed daily task...">
-        <button class="add-btn" onclick="promptAddFixed()" title="Add">+</button>
+    <!-- Add new fixed task -->
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
+      <div class="m-field" style="margin-bottom:0;">
+        <label>Task text</label>
+        <input type="text" class="m-input" id="ftText" placeholder="e.g. Morning workout">
       </div>
-      <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);margin-top:8px;">
-        You'll be asked whether this is for A or S after typing the task.
-      </p>
+      <div class="m-field" style="margin-bottom:0;">
+        <label>For whom?</label>
+        <select class="m-select" id="ftFor">
+          <option value="you" id="ftOptYou">A (You)</option>
+          <option value="friend" id="ftOptFriend">S (Friend)</option>
+        </select>
+      </div>
+      <button class="m-btn primary" onclick="addFixedTask()" style="max-width:180px;padding:11px 20px;">+ Add Fixed Task</button>
     </div>
   </div>
 
-  <!-- SYNC STATUS -->
+  <!-- DANGER ZONE -->
   <div class="settings-section">
-    <div class="section-label">Sync Status</div>
-    <div class="setting-card">
-      <div class="setting-row">
-        <div class="setting-info">
-          <div class="s-name">☁️ Firebase Sync</div>
-          <div class="s-desc" id="syncStatus">Checking connection...</div>
-        </div>
-        <div id="syncIndicator" style="width:10px;height:10px;border-radius:50%;background:var(--gold);flex-shrink:0;"></div>
+    <div class="settings-section-title" style="color:var(--rose);">⚠️ Data</div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Clear all tasks</div>
+        <div class="setting-desc">Removes all daily and weekly tasks for both users</div>
       </div>
-      <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);margin-top:14px;line-height:1.7;">
-        Project: aspire-2924d · Realtime Database<br>
-        Path: <span style="color:var(--gold2);">aspire/</span><br>
-        Deployed via Netlify — auto-syncs on push.
-      </p>
+      <button class="m-btn danger" onclick="confirmClear()" style="max-width:120px;padding:9px 14px;font-size:13px;">Clear All</button>
     </div>
   </div>
 
-  <!-- DATA MANAGEMENT -->
-  <div class="settings-section">
-    <div class="section-label">Data</div>
-    <div class="setting-card">
-      <div class="setting-row">
-        <div class="setting-info">
-          <div class="s-name">🗑 Clear All Tasks</div>
-          <div class="s-desc">Delete active tasks for both users (calendar preserved)</div>
-        </div>
-        <button class="m-btn secondary" style="flex:0;white-space:nowrap;padding:10px 18px;" onclick="clearAllTasks()">Clear</button>
-      </div>
-    </div>
-    <div class="setting-card" style="margin-top:10px;">
-      <div class="setting-row">
-        <div class="setting-info">
-          <div class="s-name">💥 Reset Everything</div>
-          <div class="s-desc">Wipe all data including calendar — fresh start</div>
-        </div>
-        <button class="m-btn secondary" style="flex:0;white-space:nowrap;padding:10px 18px;background:rgba(200,30,30,0.15);color:var(--red2);" onclick="resetAll()">Reset</button>
-      </div>
-    </div>
-  </div>
+</div><!-- /settings-wrap -->
 
-</div>
-
-<!-- WHO IS THIS FOR? modal -->
+<!-- CONFIRM MODAL -->
 <div class="overlay" id="confirmModal">
   <div class="modal">
-    <div class="modal-title">Add for whom?</div>
-    <p style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted2);margin-bottom:16px;">This fixed task will appear every day for:</p>
-    <div id="confirmPreview" style="background:var(--s2);border-radius:10px;padding:12px 16px;font-size:14px;color:var(--text);margin-bottom:20px;border:1px solid var(--border2);font-style:italic;"></div>
+    <div class="modal-title" style="color:var(--rose);">⚠️ Clear All?</div>
+    <p style="color:var(--muted2);font-size:14px;margin-bottom:20px;line-height:1.5;">This will permanently delete all tasks for both users. Calendar history will be preserved.</p>
     <div class="m-btns">
-      <button class="m-btn secondary" id="btnForA" onclick="confirmFixed('you')">A — <span id="labelA">A</span></button>
-      <button class="m-btn primary"   id="btnForS" onclick="confirmFixed('friend')">S — <span id="labelS">S</span></button>
-    </div>
-    <div class="m-btns" style="margin-top:8px;">
-      <button class="m-btn secondary" onclick="closeConfirm()">Cancel</button>
+      <button class="m-btn secondary" onclick="document.getElementById('confirmModal').classList.remove('show')">Cancel</button>
+      <button class="m-btn danger" onclick="clearAll()">Yes, clear all</button>
     </div>
   </div>
 </div>
@@ -135,160 +91,85 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded',function(){
+document.addEventListener('DOMContentLoaded', function(){
 
-const FIREBASE_CONFIG={
-  apiKey:"AIzaSyDErNk02qqYnbVFskumgNGch47gJJCzMTA",
-  authDomain:"aspire-2924d.firebaseapp.com",
-  databaseURL:"https://aspire-2924d-default-rtdb.firebaseio.com",
-  projectId:"aspire-2924d",
-  storageBucket:"aspire-2924d.firebasestorage.app",
-  messagingSenderId:"260852889050",
-  appId:"1:260852889050:web:136fe46f8fd42db64b3ce3"
-};
-const fs=document.createElement('script');fs.type='module';
-fs.textContent=`
-  import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import{getDatabase,ref,set,onValue}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-  try{
-    const app=initializeApp(${JSON.stringify(FIREBASE_CONFIG)});
-    const db=getDatabase(app);
-    window._fbPersist=(path,val)=>set(ref(db,'aspire/'+path),val);
-    onValue(ref(db,'aspire'),(snap)=>{if(snap.val())window._fbStateUpdate(snap.val());});
-    window._fbReady=true;
-  }catch(e){console.warn('Firebase:',e);}
-`;
-document.head.appendChild(fs);
+let _state = JSON.parse(localStorage.getItem('aspire_s')||'null') || defaultState();
+if(!_state.you) _state=defaultState();
+if(!_state.fixedTasks) _state.fixedTasks=[];
+
 window._fbReady=false;
+const fbScript=document.createElement('script');fbScript.type='module';
+fbScript.textContent=`import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";import{getDatabase,ref,set,onValue,remove}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";try{const app=initializeApp(window.FB_CONFIG);const db=getDatabase(app);window._fbSet=(p,v)=>set(ref(db,'aspire/'+p),v);window._fbDel=(p)=>remove(ref(db,'aspire/'+p));onValue(ref(db,'aspire'),(snap)=>{if(snap.val()){_state=snap.val();if(!_state.fixedTasks)_state.fixedTasks=[];renderPage();}});window._fbReady=true;}catch(e){console.warn(e);}`;
+document.head.appendChild(fbScript);
 
-let _state=JSON.parse(localStorage.getItem('aspire_s')||'null')||{names:{you:'A',friend:'S'},fixedTasks:{you:[],friend:[]}};
-if(!_state.fixedTasks) _state.fixedTasks={you:[],friend:[]};
+setInterval(()=>{if(window._fbReady){document.getElementById('syncDot').className='sync-dot live';document.getElementById('syncLbl').textContent='live 🔥';}},1000);
 
-window._fbStateUpdate=function(ns){_state=ns;if(!_state.fixedTasks)_state.fixedTasks={you:[],friend:[]};render();};
+function save(path,val){setDeep(_state,path,val);localStorage.setItem('aspire_s',JSON.stringify(_state));if(window._fbReady&&window._fbSet)window._fbSet(path,val);}
 
-setInterval(function(){
-  if(window._fbReady){
-    document.getElementById('syncDot').className='sync-dot live';
-    document.getElementById('syncLbl').textContent='live 🔥';
-    document.getElementById('syncStatus').textContent='Connected to Firebase Realtime Database ✓';
-    document.getElementById('syncIndicator').style.background='var(--sage)';
+function renderPage(){
+  const yn=(_state.names&&_state.names.you)||'A';
+  const fn=(_state.names&&_state.names.friend)||'S';
+  document.getElementById('sYourName').value=yn;
+  document.getElementById('sFriendName').value=fn;
+  document.getElementById('ftOptYou').textContent=yn+' (You)';
+  document.getElementById('ftOptFriend').textContent=fn+' (Friend)';
+
+  const list=document.getElementById('fixedTaskList');
+  const tasks=_state.fixedTasks||[];
+  if(!tasks.length){
+    list.innerHTML='<div class="no-data" style="padding:20px 0 8px;">No fixed tasks yet. Add one below.</div>';
+    return;
   }
-},1000);
-
-function saveAll(){
-  localStorage.setItem('aspire_s',JSON.stringify(_state));
-  if(window._fbReady&&window._fbPersist) window._fbPersist('fixedTasks',_state.fixedTasks);
+  list.innerHTML=tasks.map(function(ft,i){
+    const who=ft.for==='you'?yn:fn;
+    const cls=ft.for==='you'?'you':'friend';
+    return '<div class="fixed-task-item">'
+      +'<span class="fixed-task-who '+cls+'">'+who+'</span>'
+      +'<span class="fixed-task-txt">'+esc(ft.text)+'</span>'
+      +'<button class="fixed-del" onclick="removeFixedTask('+i+')" title="Remove">×</button>'
+      +'</div>';
+  }).join('');
 }
 
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
-function render(){
-  var yn=(_state.names&&_state.names.you)||'A';
-  var fn=(_state.names&&_state.names.friend)||'S';
-  document.getElementById('nameA').value=yn;
-  document.getElementById('nameS').value=fn;
-  document.getElementById('labelA').textContent=yn;
-  document.getElementById('labelS').textContent=fn;
-
-  var all=[];
-  ((_state.fixedTasks&&_state.fixedTasks.you)||[]).forEach(function(t){all.push(Object.assign({},t,{owner:'you',ownerLabel:yn}));});
-  ((_state.fixedTasks&&_state.fixedTasks.friend)||[]).forEach(function(t){all.push(Object.assign({},t,{owner:'friend',ownerLabel:fn}));});
-
-  var el=document.getElementById('fixedTaskList');
-  if(!all.length){
-    el.innerHTML='<p style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--muted2);padding:6px 0;">No fixed tasks yet.</p>';
-  } else {
-    el.innerHTML=all.map(function(t){
-      return '<div class="fixed-task-item">'
-        +'<span class="ft-text">'+esc(t.text)+'</span>'
-        +'<span class="ft-who">'+esc(t.ownerLabel)+'</span>'
-        +'<button class="ft-del" onclick="removeFixed(\''+t.owner+'\',\''+t.id+'\')">×</button>'
-        +'</div>';
-    }).join('');
-  }
-}
-
-window.saveNames=function(){
-  var y=document.getElementById('nameA').value.trim()||'A';
-  var f=document.getElementById('nameS').value.trim()||'S';
-  if(!_state.names) _state.names={};
-  _state.names.you=y; _state.names.friend=f;
-  localStorage.setItem('aspire_s',JSON.stringify(_state));
-  if(window._fbReady&&window._fbPersist){
-    window._fbPersist('names/you',y); window._fbPersist('names/friend',f);
-  }
-  var btn=document.getElementById('saveNamesBtn');
-  btn.textContent='✓ Saved!';
-  setTimeout(function(){btn.textContent='Save Names ✓';},1500);
-  render();
+window.saveNamesSettings=function(){
+  const y=document.getElementById('sYourName').value.trim()||'A';
+  const f=document.getElementById('sFriendName').value.trim()||'S';
+  save('names/you',y);save('names/friend',f);
+  // Flash confirm
+  const btn=event.currentTarget||document.activeElement;
+  const orig=btn.textContent;btn.textContent='Saved ✓';
+  setTimeout(()=>btn.textContent=orig,1500);
+  renderPage();
 };
 
-var _pendingText='';
-window.promptAddFixed=function(){
-  var text=document.getElementById('fixedInput').value.trim();
-  if(!text) return;
-  _pendingText=text;
-  document.getElementById('confirmPreview').textContent='"'+text+'"';
-  document.getElementById('confirmModal').classList.add('show');
+window.addFixedTask=function(){
+  const text=document.getElementById('ftText').value.trim();
+  if(!text){document.getElementById('ftText').style.borderColor='rgba(224,107,107,0.6)';setTimeout(()=>document.getElementById('ftText').style.borderColor='',800);return;}
+  const forWhom=document.getElementById('ftFor').value;
+  const tasks=_state.fixedTasks||[];
+  tasks.push({text,for:forWhom});
+  save('fixedTasks',tasks);
+  document.getElementById('ftText').value='';
+  renderPage();
 };
-window.closeConfirm=function(){
+
+window.removeFixedTask=function(i){
+  const tasks=_state.fixedTasks||[];
+  tasks.splice(i,1);
+  save('fixedTasks',tasks);
+  renderPage();
+};
+
+window.confirmClear=function(){document.getElementById('confirmModal').classList.add('show');};
+window.clearAll=function(){
+  save('you/daily',{});save('you/weekly',{});
+  save('friend/daily',{});save('friend/weekly',{});
   document.getElementById('confirmModal').classList.remove('show');
-  _pendingText='';
-};
-window.confirmFixed=function(who){
-  if(!_pendingText) return;
-  var id='fx'+Date.now()+Math.random().toString(36).slice(2,5);
-  if(!_state.fixedTasks) _state.fixedTasks={you:[],friend:[]};
-  if(!_state.fixedTasks[who]) _state.fixedTasks[who]=[];
-  _state.fixedTasks[who].push({id:id,text:_pendingText});
-  saveAll();
-  document.getElementById('fixedInput').value='';
-  closeConfirm();
-  render();
-};
-window.removeFixed=function(who,id){
-  if(!_state.fixedTasks||!_state.fixedTasks[who]) return;
-  _state.fixedTasks[who]=_state.fixedTasks[who].filter(function(t){return t.id!==id;});
-  saveAll();
-  render();
+  alert('All tasks cleared. Calendar history preserved.');
 };
 
-window.clearAllTasks=function(){
-  if(!confirm('Clear all active tasks for both A and S? Calendar data is preserved.')) return;
-  ['you','friend'].forEach(function(p){
-    if(_state[p]){_state[p].daily={};_state[p].weekly={};_state[p].dailyReset=null;_state[p].weeklyReset=null;}
-  });
-  localStorage.setItem('aspire_s',JSON.stringify(_state));
-  if(window._fbReady&&window._fbPersist){
-    ['you','friend'].forEach(function(p){
-      window._fbPersist(p+'/daily',{});window._fbPersist(p+'/weekly',{});
-      window._fbPersist(p+'/dailyReset',null);window._fbPersist(p+'/weeklyReset',null);
-    });
-  }
-  alert('Tasks cleared!');
-};
-window.resetAll=function(){
-  if(!confirm('Wipe ALL data including calendar history?')) return;
-  if(!confirm('Last warning — this cannot be undone!')) return;
-  localStorage.removeItem('aspire_s');
-  if(window._fbReady&&window._fbPersist) window._fbPersist('',null);
-  location.reload();
-};
-
-document.getElementById('confirmModal').addEventListener('click',function(e){if(e.target===document.getElementById('confirmModal'))closeConfirm();});
-document.getElementById('fixedInput').addEventListener('keydown',function(e){if(e.key==='Enter')window.promptAddFixed();});
-
-// ── STARS ──
-(function(){
-  var c=document.getElementById('starCanvas'),ctx=c.getContext('2d'),stars=[],W,H;
-  function resize(){W=c.width=innerWidth;H=c.height=innerHeight;genStars();}
-  function genStars(){stars=[];for(var i=0;i<90;i++)stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+0.2,baseO:Math.random()*0.35+0.06,speed:Math.random()*0.18+0.03,phase:Math.random()*Math.PI*2,freq:Math.random()*0.02+0.005});}
-  var t=0;
-  function draw(){ctx.clearRect(0,0,W,H);t+=0.016;stars.forEach(function(s){var o=s.baseO*(0.5+0.5*Math.sin(t*s.freq*60+s.phase));ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='rgba(255,180,100,'+o+')';ctx.fill();s.y-=s.speed*0.22;if(s.y<-2)s.y=H+2;});requestAnimationFrame(draw);}
-  window.addEventListener('resize',resize);resize();draw();
-})();
-
-render();
+initStars();initCursorSparks();
+renderPage();
 });
 </script>
 </body>
