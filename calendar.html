@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendar — AS-pire ✦</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a1208;--s1:#0f1a0c;--s2:#152110;--s3:#1b2914;--border:#1e2e18;--border2:#2a3e20;--green:#568B4B;--green2:#72b362;--green3:#9ed68e;--cream:#eef5e8;--rose:#e06b6b;--muted:#3a5230;--muted2:#5a7a4a;--text:#e8f0e0;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 700px 500px at 15% 0%,rgba(86,139,75,0.1) 0%,transparent 60%);}
+@keyframes greenShimmer{0%{background-position:0%;}100%{background-position:300%;}}
+@keyframes riseIn{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+@keyframes livePulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.3;transform:scale(0.4);}}
+.topbar{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:20px 28px 0;max-width:960px;margin:0 auto;}
+.topbar-logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:900;background:linear-gradient(135deg,#3d6634,var(--green),var(--green3),var(--green),#3d6634);background-size:300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:greenShimmer 5s linear infinite;text-decoration:none;}
+.topbar-logo em{font-style:italic;}
+.topbar-actions{display:flex;gap:8px;}
+.icon-btn{width:38px;height:38px;border-radius:11px;border:1px solid var(--border2);background:var(--s1);color:var(--muted2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.25s;text-decoration:none;}
+.icon-btn:hover{border-color:rgba(86,139,75,0.5);color:var(--green2);transform:translateY(-2px);}
+.wrap{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:28px 28px 100px;}
+.page-hdr{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--muted);text-transform:uppercase;margin-bottom:24px;}
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.cal-month{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;font-style:italic;color:var(--green2);}
+.cal-nav{display:flex;gap:7px;}
+.cal-nav-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--border2);background:var(--s1);color:var(--muted2);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+.cal-nav-btn:hover{border-color:var(--green);color:var(--green2);transform:scale(1.08);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:24px;}
+.cal-dn{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);text-align:center;padding:7px 0;}
+.cal-day{aspect-ratio:1;border-radius:10px;border:1px solid var(--border);background:var(--s1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;transition:all 0.22s cubic-bezier(0.34,1.3,0.64,1);position:relative;font-weight:500;}
+.cal-day:hover{border-color:rgba(86,139,75,0.4);background:var(--s2);transform:scale(1.05);}
+.cal-day.empty{background:transparent;border-color:transparent;cursor:default;pointer-events:none;}
+.cal-day.today{border-color:var(--green);box-shadow:0 0 12px rgba(86,139,75,0.2);}
+.cal-day.today .cal-dn2{color:var(--green2);}
+.cal-day.selected{background:rgba(86,139,75,0.12);border-color:var(--green);}
+.cal-day.has-data::after{content:'';position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:var(--green2);box-shadow:0 0 5px var(--green2);}
+.cal-dn2{font-size:14px;font-weight:600;line-height:1;}
+.cal-dots{display:flex;gap:2px;}
+.cal-dot{width:4px;height:4px;border-radius:50%;}
+.cal-dot.you{background:var(--green);}
+.cal-dot.friend{background:var(--green3);}
+.day-detail{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:22px;animation:riseIn 0.35s ease;}
+.day-title{font-family:'Playfair Display',serif;font-size:20px;font-style:italic;color:var(--cream);margin-bottom:18px;}
+.user-section{margin-bottom:18px;}
+.user-lbl{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:2px;margin-bottom:9px;}
+.user-lbl.you{color:var(--green2);}
+.user-lbl.friend{color:var(--green3);}
+.task-row{display:flex;align-items:center;gap:9px;padding:7px 11px;background:var(--s2);border-radius:8px;margin-bottom:5px;font-size:13px;}
+.t-done{color:var(--green2);font-size:14px;}
+.t-pend{color:var(--rose);font-size:14px;}
+.t-txt-done{color:var(--muted);text-decoration:line-through;}
+.no-data{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-align:center;padding:24px;letter-spacing:1px;}
+.sync-pill{position:fixed;bottom:20px;right:20px;display:flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--border);border-radius:50px;padding:6px 13px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);z-index:50;}
+.sync-dot{width:6px;height:6px;border-radius:50%;}
+.sync-dot.live{background:var(--green2);box-shadow:0 0 6px var(--green2);animation:livePulse 1.4s infinite;}
+.sync-dot.local{background:var(--green);}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a class="topbar-logo" href="index.html">AS<em>-pire</em></a>
+  <div class="topbar-actions">
+    <a class="icon-btn" href="settings.html">⚙️</a>
+    <a class="icon-btn" href="index.html">🏠</a>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="page-hdr">📅 task history</div>
+  <div class="cal-header">
+    <div class="cal-month" id="calMonth">Month Year</div>
+    <div class="cal-nav">
+      <button class="cal-nav-btn" id="prevBtn">‹</button>
+      <button class="cal-nav-btn" id="todayBtn">Today</button>
+      <button class="cal-nav-btn" id="nextBtn">›</button>
+    </div>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+  <div id="dayDetail"></div>
+</div>
+
+<div class="sync-pill"><div class="sync-dot local" id="syncDot"></div><span id="syncLbl">local</span></div>
+
+<script>
+(function(){
+'use strict';
+var FB_CONFIG={apiKey:"AIzaSyDErNk02qqYnbVFskumgNGch47gJJCzMTA",authDomain:"aspire-2924d.firebaseapp.com",databaseURL:"https://aspire-2924d-default-rtdb.firebaseio.com",projectId:"aspire-2924d",storageBucket:"aspire-2924d.firebasestorage.app",messagingSenderId:"260852889050",appId:"1:260852889050:web:136fe46f8fd42db64b3ce3"};
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function defaultState(){return{names:{you:'A',friend:'S'},quote:'',streak:0,lastActive:'',fixedTasks:[],calendar:{},you:{daily:{},weekly:{},weeklyReset:null,lastDailyReset:''},friend:{daily:{},weekly:{},weeklyReset:null,lastDailyReset:''}};}
+
+var _state=JSON.parse(localStorage.getItem('aspire_s')||'null')||defaultState();
+if(!_state.calendar)_state.calendar={};
+if(!_state.names)_state.names={you:'A',friend:'S'};
+
+var fbMod=document.createElement('script');fbMod.type='module';
+fbMod.textContent='import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";import{getDatabase,ref,onValue}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";try{var app=initializeApp('+JSON.stringify(FB_CONFIG)+');var db=getDatabase(app);onValue(ref(db,"aspire"),function(snap){if(snap.val())window.__cIncoming(snap.val());});window.__cReady=true;}catch(e){console.warn(e);}';
+document.head.appendChild(fbMod);
+var poll=setInterval(function(){if(window.__cReady){clearInterval(poll);document.getElementById('syncDot').className='sync-dot live';document.getElementById('syncLbl').textContent='live 🔥';}},500);
+window.__cIncoming=function(ns){_state=ns;if(!_state.calendar)_state.calendar={};if(!_state.names)_state.names={you:'A',friend:'S'};renderCal();if(selDate)renderDetail(selDate);};
+
+var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+var now=new Date();
+var viewYear=now.getFullYear(),viewMonth=now.getMonth();
+var selDate=todayStr();
+
+function renderCal(){
+  var yn=(_state.names&&_state.names.you)||'A';
+  var fn=(_state.names&&_state.names.friend)||'S';
+  var today=todayStr();
+  var cal=_state.calendar||{};
+  document.getElementById('calMonth').textContent=MONTHS[viewMonth]+' '+viewYear;
+  var html='';
+  DAYS.forEach(function(d){html+='<div class="cal-dn">'+d+'</div>';});
+  var first=new Date(viewYear,viewMonth,1).getDay();
+  var dim=new Date(viewYear,viewMonth+1,0).getDate();
+  for(var i=0;i<first;i++)html+='<div class="cal-day empty"></div>';
+  for(var d=1;d<=dim;d++){
+    var ds=viewYear+'-'+String(viewMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var isT=ds===today,isSel=ds===selDate;
+    var dd=cal[ds];
+    var hasD=!!(dd&&(Object.keys((dd.you||{})).length||Object.keys((dd.friend||{})).length));
+    // Also mark today with live tasks
+    if(ds===today&&(Object.keys((_state.you&&_state.you.daily)||{}).length||Object.keys((_state.friend&&_state.friend.daily)||{}).length))hasD=true;
+    var cls='cal-day'+(isT?' today':'')+(isSel?' selected':'')+(hasD?' has-data':'');
+    var yTasks=dd&&dd.you?Object.values(dd.you):[];
+    var fTasks=dd&&dd.friend?Object.values(dd.friend):[];
+    html+='<div class="'+cls+'" data-date="'+ds+'">'
+      +'<div class="cal-dn2">'+d+'</div>'
+      +(hasD?'<div class="cal-dots">'+(yTasks.length?'<div class="cal-dot you"></div>':'')+(fTasks.length?'<div class="cal-dot friend"></div>':'')+'</div>':'')
+      +'</div>';
+  }
+  document.getElementById('calGrid').innerHTML=html;
+}
+
+function renderDetail(ds){
+  var yn=(_state.names&&_state.names.you)||'A';
+  var fn=(_state.names&&_state.names.friend)||'S';
+  var cal=_state.calendar||{};
+  var today=todayStr();
+  var yTasks,fTasks;
+  if(ds===today){
+    yTasks=Object.values((_state.you&&_state.you.daily)||{}).sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+    fTasks=Object.values((_state.friend&&_state.friend.daily)||{}).sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+  }else{
+    var dd=cal[ds];
+    if(!dd){
+      document.getElementById('dayDetail').innerHTML='<div class="day-detail"><div class="no-data">No data for this date. Tasks are saved here when the day resets at midnight.</div></div>';
+      return;
+    }
+    yTasks=Object.values(dd.you||{}).sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+    fTasks=Object.values(dd.friend||{}).sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+  }
+  var d=new Date(ds+'T12:00:00');
+  var label=d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  function taskRows(tasks){
+    if(!tasks.length)return'<div class="no-data" style="text-align:left;padding:8px 0 4px;">No tasks</div>';
+    return tasks.map(function(t){
+      return'<div class="task-row">'+(t.done?'<span class="t-done">✓</span>':'<span class="t-pend">○</span>')+'<span class="'+(t.done?'t-txt-done':'')+'">'+esc(t.text)+'</span>'+(t.carried?'<span style="font-size:9px;color:var(--rose);font-family:JetBrains Mono,monospace;"> ↩</span>':'')+'</div>';
+    }).join('');
+  }
+  document.getElementById('dayDetail').innerHTML='<div class="day-detail"><div class="day-title">📅 '+label+'</div>'
+    +'<div class="user-section"><div class="user-lbl you">● '+yn+'\'s tasks</div>'+taskRows(yTasks)+'</div>'
+    +'<div class="user-section"><div class="user-lbl friend">● '+fn+'\'s tasks</div>'+taskRows(fTasks)+'</div>'
+    +'</div>';
+}
+
+document.getElementById('calGrid').addEventListener('click',function(e){
+  var cell=e.target.closest('[data-date]');if(!cell)return;
+  selDate=cell.dataset.date;
+  renderCal();
+  renderDetail(selDate);
+  document.getElementById('dayDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
+});
+document.getElementById('prevBtn').addEventListener('click',function(){viewMonth--;if(viewMonth<0){viewMonth=11;viewYear--;}renderCal();});
+document.getElementById('nextBtn').addEventListener('click',function(){viewMonth++;if(viewMonth>11){viewMonth=0;viewYear++;}renderCal();});
+document.getElementById('todayBtn').addEventListener('click',function(){var n=new Date();viewYear=n.getFullYear();viewMonth=n.getMonth();selDate=todayStr();renderCal();renderDetail(selDate);});
+
+renderCal();
+renderDetail(selDate);
+})();
+</script>
+</body>
+</html>
