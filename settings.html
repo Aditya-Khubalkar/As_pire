@@ -4,18 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>As_pire — Settings</title>
-  <link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="theme.css?v=3" />
 </head>
 <body>
 
-<!-- Sticky Note -->
 <div class="sticky-note-wrapper" id="stickyWrapper">
-  <div class="sticky-note" id="stickyExpanded">
+  <div class="sticky-note hidden" id="stickyExpanded">
     <button class="sticky-collapse-btn" onclick="collapseSticky()" title="Minimise">−</button>
     <div class="sticky-note-label">📌 Shared Note</div>
     <textarea id="stickyTextarea" placeholder="Write a shared note…" rows="4" oninput="onStickyInput()"></textarea>
   </div>
-  <div class="sticky-minimized hidden" id="stickyMin" onclick="expandSticky()" title="Open note">📌</div>
+  <div class="sticky-minimized" id="stickyMin" onclick="expandSticky()" title="Open note">📌</div>
 </div>
 
 <div class="app-shell">
@@ -42,87 +41,50 @@
     </div>
 
     <div style="max-width:680px;display:flex;flex-direction:column;gap:20px;">
-
-      <!-- ── 1. Theme ──────────────────────────────────────── -->
       <div class="card">
         <div class="card-title">🎨 Appearance</div>
         <div class="settings-section">
           <div class="settings-row">
-            <div>
-              <div class="settings-label">Dark Mode</div>
-              <div class="settings-desc">Switch between light and dark theme.</div>
-            </div>
-            <label class="toggle">
-              <input type="checkbox" id="themeToggle" onchange="handleThemeToggle(this)" />
-              <span class="toggle-slider"></span>
-            </label>
+            <div><div class="settings-label">Dark Mode</div><div class="settings-desc">Switch between light and dark theme.</div></div>
+            <label class="toggle"><input type="checkbox" id="themeToggle" onchange="handleThemeToggle(this)" /><span class="toggle-slider"></span></label>
           </div>
         </div>
       </div>
 
-      <!-- ── 2. Clear Data ─────────────────────────────────── -->
       <div class="card">
         <div class="card-title">🗑️ Clear Data</div>
-        <p class="text-muted" style="margin-bottom:16px;">Delete tasks for a specific user and time period. Fixed tasks are never deleted here — manage them in the section below.</p>
-
+        <p class="text-muted" style="margin-bottom:16px;">Delete tasks for a specific user and time period.</p>
         <div class="settings-section">
+          <div class="settings-row"><div><div class="settings-label">User</div></div><select class="settings-select" id="clearUser"></select></div>
           <div class="settings-row">
-            <div>
-              <div class="settings-label">User</div>
-            </div>
-            <select class="settings-select" id="clearUser"></select>
+            <div><div class="settings-label">Period</div><div class="settings-desc">Choose how much data to erase.</div></div>
+            <select class="settings-select" id="clearPeriod"><option value="today">Today only</option><option value="week">This week</option><option value="month">This month</option><option value="all">All time</option></select>
           </div>
-          <div class="settings-row">
-            <div>
-              <div class="settings-label">Period</div>
-              <div class="settings-desc">Choose how much data to erase.</div>
-            </div>
-            <select class="settings-select" id="clearPeriod">
-              <option value="today">Today only</option>
-              <option value="week">This week</option>
-              <option value="month">This month</option>
-              <option value="all">All time</option>
-            </select>
-          </div>
-          <div class="settings-row" style="border-bottom:none;">
-            <div></div>
-            <button class="btn btn-danger" onclick="handleClearData()">Clear Data</button>
-          </div>
+          <div class="settings-row" style="border-bottom:none;"><div></div><button class="btn btn-danger" onclick="handleClearData()">Clear Data</button></div>
         </div>
       </div>
 
-      <!-- ── 3. Fixed Tasks ────────────────────────────────── -->
       <div class="card">
         <div class="card-title">📌 Fixed Daily Tasks</div>
-        <p class="text-muted" style="margin-bottom:16px;">These tasks appear automatically in the daily view for each user, every single day. They carry over their own completion per day.</p>
-
-        <!-- User selector for fixed tasks -->
+        <p class="text-muted" style="margin-bottom:16px;">These appear automatically in the daily view for each user.</p>
         <div style="display:flex;gap:8px;margin-bottom:18px;" id="fixedUserTabs"></div>
-
         <ul class="task-list" id="fixedTaskList"></ul>
-
         <div class="add-task-row" style="margin-top:14px;">
-          <input class="add-task-input" type="text" id="newFixedTask" placeholder="Add fixed daily task…"
-            onkeydown="if(event.key==='Enter') addFixedTask()" />
+          <input class="add-task-input" type="text" id="newFixedTask" placeholder="Add fixed daily task…" onkeydown="if(event.key==='Enter') addFixedTask()" />
           <button class="btn btn-primary" onclick="addFixedTask()">+ Add</button>
         </div>
       </div>
-
     </div>
   </main>
 </div>
 
-<!-- Edit Fixed Task Modal -->
 <div class="modal-overlay" id="editFixedModal">
   <div class="modal">
     <div class="modal-header">
       <span class="modal-title">Edit Fixed Task</span>
       <button class="modal-close" onclick="closeEditFixed()">✕</button>
     </div>
-    <div class="form-group">
-      <label class="form-label">Task Text</label>
-      <input class="form-input" id="editFixedInput" type="text" />
-    </div>
+    <div class="form-group"><label class="form-label">Task Text</label><input class="form-input" id="editFixedInput" type="text" /></div>
     <div style="display:flex;gap:10px;margin-top:16px;">
       <button class="btn btn-primary" onclick="saveEditFixed()">Save</button>
       <button class="btn btn-ghost" onclick="closeEditFixed()">Cancel</button>
@@ -131,13 +93,9 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js"></script>
+<script src="app.js?v=3"></script>
 <script>
-let allTasks = [];
-let knownUsers = [];
-let selectedFixedUser = null;
-let editingFixedId = null;
-let stickyDebounce = null;
+let allTasks = [], knownUsers = [], selectedFixedUser = null, editingFixedId = null, stickyDebounce = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const user = requireAuth();
@@ -153,8 +111,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadAllTasks();
   await loadSticky();
   setupRealtime();
-
-  // Sync theme toggle state
   document.getElementById('themeToggle').checked = (AppState.theme === 'dark');
 });
 
@@ -163,159 +119,66 @@ async function loadKnownUsers() {
     const { data } = await supabase.from('settings').select('value').eq('key','usernames').single();
     knownUsers = data?.value ? JSON.parse(data.value) : [];
   } catch { knownUsers = []; }
-  if (!knownUsers.includes(AppState.currentUser.username)) {
-    knownUsers.push(AppState.currentUser.username);
-  }
+  if (!knownUsers.includes(AppState.currentUser.username)) knownUsers.push(AppState.currentUser.username);
 }
-
 async function loadAllTasks() {
   allTasks = [];
-  for (const u of knownUsers) {
-    const tasks = await fetchTasksForUser(u).catch(() => []);
-    allTasks.push(...tasks);
-  }
+  for (const u of knownUsers) allTasks.push(...(await fetchTasksForUser(u).catch(() => [])));
   renderFixedTaskList();
 }
 
-// ── Theme ─────────────────────────────────────────────────────
-function handleThemeToggle(cb) {
-  applyTheme(cb.checked ? 'dark' : 'light');
-}
-
-// ── Clear Data ────────────────────────────────────────────────
-function populateClearUserSelect() {
-  const sel = document.getElementById('clearUser');
-  sel.innerHTML = knownUsers.map(u => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
-}
+function handleThemeToggle(cb) { applyTheme(cb.checked ? 'dark' : 'light'); }
+function populateClearUserSelect() { document.getElementById('clearUser').innerHTML = knownUsers.map(u => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join(''); }
 
 async function handleClearData() {
-  const username = document.getElementById('clearUser').value;
-  const scope = document.getElementById('clearPeriod').value;
-  const confirm1 = confirm(`Delete ${scope === 'all' ? 'ALL' : scope + "'s"} non-fixed tasks for "${username}"? This cannot be undone.`);
-  if (!confirm1) return;
-  try {
-    await clearUserData(username, scope);
-    showToast(`Cleared ${scope} data for ${username}.`);
-    await loadAllTasks();
-  } catch(e) { showToast(e.message, 'error'); }
+  const username = document.getElementById('clearUser').value, scope = document.getElementById('clearPeriod').value;
+  if (!confirm(`Delete ${scope === 'all' ? 'ALL' : scope + "'s"} non-fixed tasks for "${username}"?`)) return;
+  try { await clearUserData(username, scope); showToast(`Cleared ${scope} data for ${username}.`); await loadAllTasks(); } catch(e) { showToast(e.message, 'error'); }
 }
 
-// ── Fixed Tasks ───────────────────────────────────────────────
-function renderFixedUserTabs() {
-  const tabs = document.getElementById('fixedUserTabs');
-  tabs.innerHTML = knownUsers.map(u => `
-    <button class="btn ${selectedFixedUser === u ? 'btn-primary' : 'btn-ghost'}"
-      onclick="selectFixedUser('${escapeHtml(u)}')">${escapeHtml(u)}</button>
-  `).join('');
-}
-
-function selectFixedUser(u) {
-  selectedFixedUser = u;
-  renderFixedUserTabs();
-  renderFixedTaskList();
-}
+function renderFixedUserTabs() { document.getElementById('fixedUserTabs').innerHTML = knownUsers.map(u => `<button class="btn ${selectedFixedUser === u ? 'btn-primary' : 'btn-ghost'}" onclick="selectFixedUser('${escapeHtml(u)}')">${escapeHtml(u)}</button>`).join(''); }
+function selectFixedUser(u) { selectedFixedUser = u; renderFixedUserTabs(); renderFixedTaskList(); }
 
 function renderFixedTaskList() {
   const list = document.getElementById('fixedTaskList');
   const tasks = allTasks.filter(t => t.username === selectedFixedUser && t.is_fixed && t.type === 'daily');
-  if (tasks.length === 0) {
-    list.innerHTML = '<li class="text-muted" style="padding:8px 0;font-size:0.85rem;">No fixed tasks yet. Add one below.</li>';
-    return;
-  }
-  list.innerHTML = tasks.map(t => `
-    <li class="task-item" id="ftask-${t.id}">
-      <span style="font-size:1rem;">📌</span>
-      <span class="task-label">${escapeHtml(t.text)}</span>
-      <div class="task-actions" style="opacity:1;">
-        <button class="task-btn" onclick="openEditFixed('${t.id}', ${JSON.stringify(escapeHtml(t.text))})" title="Edit">✎</button>
-        <button class="task-btn delete" onclick="deleteFixedTask('${t.id}')" title="Delete">✕</button>
-      </div>
-    </li>
-  `).join('');
+  if (tasks.length === 0) return list.innerHTML = '<li class="text-muted" style="padding:8px 0;font-size:0.85rem;">No fixed tasks yet.</li>';
+  list.innerHTML = tasks.map(t => `<li class="task-item" id="ftask-${t.id}"><span style="font-size:1rem;">📌</span><span class="task-label">${escapeHtml(t.text)}</span>
+    <div class="task-actions" style="opacity:1;"><button class="task-btn" onclick="openEditFixed('${t.id}', ${JSON.stringify(escapeHtml(t.text))})">✎</button><button class="task-btn delete" onclick="deleteFixedTask('${t.id}')">✕</button></div></li>`).join('');
 }
 
 async function addFixedTask() {
-  const input = document.getElementById('newFixedTask');
-  const text = input.value.trim();
+  const text = document.getElementById('newFixedTask').value.trim();
   if (!text) return;
-  input.value = '';
-  try {
-    await addTask({
-      username: selectedFixedUser,
-      text,
-      type: 'daily',
-      date_key: null,
-      week_key: null,
-      is_fixed: true
-    });
-    showToast('Fixed task added!');
-    await loadAllTasks();
-  } catch(e) { showToast(e.message, 'error'); }
+  document.getElementById('newFixedTask').value = '';
+  try { await addTask({ username: selectedFixedUser, text, type: 'daily', date_key: null, week_key: null, is_fixed: true }); showToast('Fixed task added!'); await loadAllTasks(); } catch(e) { showToast(e.message, 'error'); }
 }
-
 async function deleteFixedTask(id) {
-  if (!confirm('Remove this fixed daily task?')) return;
-  try {
-    await deleteTask(id);
-    showToast('Fixed task removed.');
-    await loadAllTasks();
-  } catch(e) { showToast(e.message, 'error'); }
+  if (!confirm('Remove fixed daily task?')) return;
+  try { await deleteTask(id); showToast('Fixed task removed.'); await loadAllTasks(); } catch(e) { showToast(e.message, 'error'); }
 }
 
-function openEditFixed(id, text) {
-  editingFixedId = id;
-  document.getElementById('editFixedInput').value = text;
-  document.getElementById('editFixedModal').classList.add('open');
-}
-function closeEditFixed() {
-  editingFixedId = null;
-  document.getElementById('editFixedModal').classList.remove('open');
-}
+function openEditFixed(id, text) { editingFixedId = id; document.getElementById('editFixedInput').value = text; document.getElementById('editFixedModal').classList.add('open'); }
+function closeEditFixed() { editingFixedId = null; document.getElementById('editFixedModal').classList.remove('open'); }
 async function saveEditFixed() {
   const text = document.getElementById('editFixedInput').value.trim();
   if (!text || !editingFixedId) return;
-  try {
-    await updateTask(editingFixedId, { text });
-    showToast('Fixed task updated!');
-    closeEditFixed();
-    await loadAllTasks();
-  } catch(e) { showToast(e.message, 'error'); }
+  try { await updateTask(editingFixedId, { text }); showToast('Task updated!'); closeEditFixed(); await loadAllTasks(); } catch(e) { showToast(e.message, 'error'); }
 }
 
-// ── Sticky ────────────────────────────────────────────────────
-async function loadSticky() {
-  const text = await fetchStickyNote();
-  document.getElementById('stickyTextarea').value = text;
-}
-function onStickyInput() {
-  clearTimeout(stickyDebounce);
-  stickyDebounce = setTimeout(() => saveStickyNote(document.getElementById('stickyTextarea').value), 800);
-}
-function collapseSticky() {
-  document.getElementById('stickyExpanded').classList.add('hidden');
-  document.getElementById('stickyMin').classList.remove('hidden');
-}
-function expandSticky() {
-  document.getElementById('stickyMin').classList.add('hidden');
-  document.getElementById('stickyExpanded').classList.remove('hidden');
-}
+async function loadSticky() { document.getElementById('stickyTextarea').value = await fetchStickyNote(); }
+function onStickyInput() { clearTimeout(stickyDebounce); stickyDebounce = setTimeout(() => saveStickyNote(document.getElementById('stickyTextarea').value), 800); }
+function collapseSticky() { document.getElementById('stickyExpanded').classList.add('hidden'); document.getElementById('stickyMin').classList.remove('hidden'); }
+function expandSticky() { document.getElementById('stickyMin').classList.add('hidden'); document.getElementById('stickyExpanded').classList.remove('hidden'); }
 
 function setupRealtime() {
-  subscribeToTasks(async () => { await loadAllTasks(); });
+  subscribeToTasks(async () => await loadAllTasks());
   subscribeToSettings(async (payload) => {
-    if (payload?.new?.key === 'sticky_note') {
-      document.getElementById('stickyTextarea').value = payload.new.value || '';
-    }
-    if (payload?.new?.key === 'usernames') {
-      try { knownUsers = JSON.parse(payload.new.value); populateClearUserSelect(); renderFixedUserTabs(); } catch {}
-      await loadAllTasks();
-    }
+    if (payload?.new?.key === 'sticky_note') document.getElementById('stickyTextarea').value = payload.new.value || '';
+    if (payload?.new?.key === 'usernames') { try { knownUsers = JSON.parse(payload.new.value); populateClearUserSelect(); renderFixedUserTabs(); } catch {} await loadAllTasks(); }
   });
 }
-
-document.getElementById('editFixedModal').addEventListener('click', function(e) {
-  if (e.target === this) closeEditFixed();
-});
+document.getElementById('editFixedModal').addEventListener('click', function(e) { if (e.target === this) closeEditFixed(); });
 </script>
 </body>
 </html>
