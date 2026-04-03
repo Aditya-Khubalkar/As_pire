@@ -8,7 +8,18 @@
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getDatabase,ref,onValue}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 const FB={apiKey:"AIzaSyDErNk02qqYnbVFskumgNGch47gJJCzMTA",authDomain:"aspire-2924d.firebaseapp.com",databaseURL:"https://aspire-2924d-default-rtdb.firebaseio.com",projectId:"aspire-2924d",storageBucket:"aspire-2924d.firebasestorage.app",messagingSenderId:"260852889050",appId:"1:260852889050:web:136fe46f8fd42db64b3ce3"};
-try{const app=initializeApp(FB);const db=getDatabase(app);onValue(ref(db,"aspire"),sn=>{if(sn.val()&&window._fbIncoming)window._fbIncoming(sn.val());});window._fbReady=true;}catch(e){console.warn(e);}
+try{
+  const app=initializeApp(FB);
+  const db=getDatabase(app);
+  onValue(ref(db,"aspire"),sn=>{
+    const val = sn.val();
+    if(val){
+      if(window._fbIncoming) window._fbIncoming(val);
+      else window._earlyFbData = val;
+    }
+  });
+  window._fbReady=true;
+}catch(e){console.warn(e);}
 </script>
 <style>
 [data-theme="dark"]{--bg:#0a1208;--s1:#0f1a0c;--s2:#152110;--s3:#1b2914;--border:#1e2e18;--border2:#2a3e20;--green:#568B4B;--green2:#72b362;--green3:#9ed68e;--rose:#e06b6b;--muted2:#5a7a4a;--text:#e8f0e0;}
@@ -81,16 +92,30 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-
 </div>
 <div class="sync-pill"><div class="sync-dot local" id="syncDot"></div><span id="syncLbl">local</span></div>
 <script>
-(function(){
+document.addEventListener('DOMContentLoaded', function() {
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function todayStr(){return new Date().toISOString().slice(0,10);}
 function def(){return{names:{you:'A',friend:'S'},quote:'',streak:0,lastActive:'',fixedTasks:[],calendar:{},you:{daily:{},weekly:{},weeklyReset:null,lastDailyReset:''},friend:{daily:{},weekly:{},weeklyReset:null,lastDailyReset:''}};}
 var _st=JSON.parse(localStorage.getItem('aspire_s')||'null')||def();
 if(!_st.calendar)_st.calendar={};if(!_st.names)_st.names={you:'A',friend:'S'};
 var _fb=false;
-function chkFB(){if(window._fbReady&&!_fb){_fb=true;document.getElementById('syncDot').className='sync-dot live';document.getElementById('syncLbl').textContent='live 🔥';}}
+function chkFB(){if(window._fbReady&&!_fb){_fb=true;var sd=document.getElementById('syncDot');if(sd)sd.className='sync-dot live';var sl=document.getElementById('syncLbl');if(sl)sl.textContent='live 🔥';}}
 setInterval(chkFB,300);
-window._fbIncoming=function(ns){_st=ns;if(!_st.calendar)_st.calendar={};if(!_st.names)_st.names={you:'A',friend:'S'};renderCal();if(selDate)renderDetail(selDate);};
+
+window._fbIncoming = function(ns) {
+  if(!ns) return;
+  if (!ns.calendar && Object.keys(_st.calendar || {}).length > 0) return;
+  _st = Object.assign({}, _st, ns);
+  if(!_st.calendar)_st.calendar={};
+  if(!_st.names)_st.names={you:'A',friend:'S'};
+  renderCal();
+  if(selDate)renderDetail(selDate);
+};
+
+if (window._earlyFbData) {
+  window._fbIncoming(window._earlyFbData);
+  delete window._earlyFbData;
+}
 
 var _theme=localStorage.getItem('aspire_theme')||'dark';
 function applyTheme(t){document.documentElement.setAttribute('data-theme',t);document.getElementById('themeBtn').textContent=t==='dark'?'☀️':'🌙';localStorage.setItem('aspire_theme',t);_theme=t;}
@@ -142,7 +167,7 @@ document.getElementById('prevBtn').addEventListener('click',function(){viewMonth
 document.getElementById('nextBtn').addEventListener('click',function(){viewMonth++;if(viewMonth>11){viewMonth=0;viewYear++;}renderCal();});
 document.getElementById('todayBtn').addEventListener('click',function(){var n=new Date();viewYear=n.getFullYear();viewMonth=n.getMonth();selDate=todayStr();renderCal();renderDetail(selDate);});
 renderCal();renderDetail(selDate);
-})();
+});
 </script>
 </body>
 </html>
