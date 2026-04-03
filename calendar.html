@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendar — AS-pire ✦</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{getDatabase,ref,onValue}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const FB={apiKey:"AIzaSyDErNk02qqYnbVFskumgNGch47gJJCzMTA",authDomain:"aspire-2924d.firebaseapp.com",databaseURL:"https://aspire-2924d-default-rtdb.firebaseio.com",projectId:"aspire-2924d",storageBucket:"aspire-2924d.firebasestorage.app",messagingSenderId:"260852889050",appId:"1:260852889050:web:136fe46f8fd42db64b3ce3"};
+try{const app=initializeApp(FB);const db=getDatabase(app);onValue(ref(db,"aspire"),sn=>{if(sn.val()&&window._fbIncoming)window._fbIncoming(sn.val());});window._fbReady=true;}catch(e){console.warn(e);}
+</script>
+<style>
+[data-theme="dark"]{--bg:#0a1208;--s1:#0f1a0c;--s2:#152110;--s3:#1b2914;--border:#1e2e18;--border2:#2a3e20;--green:#568B4B;--green2:#72b362;--green3:#9ed68e;--rose:#e06b6b;--muted2:#5a7a4a;--text:#e8f0e0;}
+[data-theme="light"]{--bg:#80B887;--s1:#93c49a;--s2:#a4d0aa;--s3:#b5dcba;--border:#5a9960;--border2:#4a8a50;--green:#1e5224;--green2:#134018;--green3:#0d2a12;--rose:#c0392b;--muted2:#1e4824;--text:#0d2a12;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .4s,color .4s;}
+@keyframes shimmer{0%{background-position:0%;}100%{background-position:300%;}}
+@keyframes riseIn{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+@keyframes livePulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.3;transform:scale(.4);}}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 28px 0;max-width:960px;margin:0 auto;}
+.topbar-logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:900;background:linear-gradient(135deg,#3d6634,var(--green),var(--green3),var(--green),#3d6634);background-size:300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 5s linear infinite;text-decoration:none;}
+.topbar-logo em{font-style:italic;}
+.topbar-actions{display:flex;gap:8px;}
+.icon-btn{width:38px;height:38px;border-radius:11px;border:1px solid var(--border2);background:var(--s1);color:var(--muted2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .25s;text-decoration:none;}
+.icon-btn:hover{border-color:var(--green);color:var(--green2);transform:translateY(-2px);}
+.wrap{max-width:960px;margin:0 auto;padding:28px 28px 100px;}
+.page-hdr{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--muted2);text-transform:uppercase;margin-bottom:24px;}
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.cal-month{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;font-style:italic;color:var(--green2);}
+.cal-nav{display:flex;gap:7px;}
+.cal-nav-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--border2);background:var(--s1);color:var(--muted2);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.cal-nav-btn:hover{border-color:var(--green);color:var(--green2);transform:scale(1.08);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:24px;}
+.cal-dn{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);text-align:center;padding:7px 0;}
+.cal-day{aspect-ratio:1;border-radius:10px;border:1px solid var(--border);background:var(--s1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;transition:all .22s cubic-bezier(.34,1.3,.64,1);position:relative;font-weight:500;}
+.cal-day:hover{border-color:rgba(86,139,75,.4);background:var(--s2);transform:scale(1.05);}
+.cal-day.empty{background:transparent;border-color:transparent;cursor:default;pointer-events:none;}
+.cal-day.today{border-color:var(--green);box-shadow:0 0 12px rgba(86,139,75,.2);}
+.cal-day.today .cal-dn2{color:var(--green2);font-weight:800;}
+.cal-day.selected{background:rgba(86,139,75,.12);border-color:var(--green);}
+.cal-day.has-data::after{content:'';position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:var(--green2);box-shadow:0 0 5px var(--green2);}
+.cal-dn2{font-size:14px;font-weight:600;line-height:1;}
+.cal-dots{display:flex;gap:2px;}
+.cal-dot{width:4px;height:4px;border-radius:50%;}
+.cal-dot.you{background:var(--green);}
+.cal-dot.friend{background:var(--green3);}
+.day-detail{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:22px;animation:riseIn .35s ease;transition:background .3s;}
+.day-title{font-family:'Playfair Display',serif;font-size:20px;font-style:italic;color:var(--text);margin-bottom:18px;}
+.user-section{margin-bottom:18px;}
+.user-lbl{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:2px;margin-bottom:9px;}
+.user-lbl.you{color:var(--green2);}
+.user-lbl.friend{color:var(--green3);}
+.task-row{display:flex;align-items:center;gap:9px;padding:7px 11px;background:var(--s2);border-radius:8px;margin-bottom:5px;font-size:13px;transition:background .3s;}
+.t-done{color:var(--green2);font-size:14px;}
+.t-pend{color:var(--rose);font-size:14px;}
+.t-done-txt{color:var(--muted2);text-decoration:line-through;}
+.no-data{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted2);text-align:center;padding:24px;letter-spacing:1px;}
+.sync-pill{position:fixed;bottom:20px;right:20px;display:flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--border);border-radius:50px;padding:6px 13px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);z-index:50;}
+.sync-dot{width:6px;height:6px;border-radius:50%;}
+.sync-dot.live{background:var(--green2);box-shadow:0 0 6px var(--green2);animation:livePulse 1.4s infinite;}
+.sync-dot.local{background:var(--green);}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a class="topbar-logo" href="index.html">AS<em>-pire</em></a>
+  <div class="topbar-actions">
+    <button class="icon-btn" id="themeBtn">☀️</button>
+    <a class="icon-btn" href="settings.html">⚙️</a>
+    <a class="icon-btn" href="index.html">🏠</a>
+  </div>
+</div>
+<div class="wrap">
+  <div class="page-hdr">📅 task history</div>
+  <div class="cal-header"><div class="cal-month" id="calMonth">Month Year</div>
+    <div class="cal-nav"><button class="cal-nav-btn" id="prevBtn">‹</button><button class="cal-nav-btn" id="todayBtn">Today</button><button class="cal-nav-btn" id="nextBtn">›</button></div>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+  <div id="dayDetail"></div>
+</div>
+<div class="sync-pill"><div class="sync-dot local" id="syncDot"></div><span id="syncLbl">local</span></div>
+<script>
+(function(){
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function def(){return{names:{you:'A',friend:'S'},quote:'',streak:0,lastActive:'',fixedTasks:[],calendar:{},you:{daily:{},weekly:{},weeklyReset:null,lastDailyReset:''},friend:{daily:{},weekly:{},weeklyReset:null,lastDailyReset:''}};}
+var _st=JSON.parse(localStorage.getItem('aspire_s')||'null')||def();
+if(!_st.calendar)_st.calendar={};if(!_st.names)_st.names={you:'A',friend:'S'};
+var _fb=false;
+function chkFB(){if(window._fbReady&&!_fb){_fb=true;document.getElementById('syncDot').className='sync-dot live';document.getElementById('syncLbl').textContent='live 🔥';}}
+setInterval(chkFB,300);
+window._fbIncoming=function(ns){_st=ns;if(!_st.calendar)_st.calendar={};if(!_st.names)_st.names={you:'A',friend:'S'};renderCal();if(selDate)renderDetail(selDate);};
+
+var _theme=localStorage.getItem('aspire_theme')||'dark';
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);document.getElementById('themeBtn').textContent=t==='dark'?'☀️':'🌙';localStorage.setItem('aspire_theme',t);_theme=t;}
+applyTheme(_theme);
+document.getElementById('themeBtn').addEventListener('click',function(){applyTheme(_theme==='dark'?'light':'dark');});
+
+var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+var now=new Date(),viewYear=now.getFullYear(),viewMonth=now.getMonth(),selDate=todayStr();
+
+function renderCal(){
+  var yn=(_st.names&&_st.names.you)||'A',fn=(_st.names&&_st.names.friend)||'S';
+  var today=todayStr(),cal=_st.calendar||{};
+  document.getElementById('calMonth').textContent=MONTHS[viewMonth]+' '+viewYear;
+  var html='';
+  DAYS.forEach(function(d){html+='<div class="cal-dn">'+d+'</div>';});
+  var first=new Date(viewYear,viewMonth,1).getDay(),dim=new Date(viewYear,viewMonth+1,0).getDate();
+  for(var i=0;i<first;i++)html+='<div class="cal-day empty"></div>';
+  for(var d=1;d<=dim;d++){
+    var ds=viewYear+'-'+String(viewMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var isT=ds===today,isSel=ds===selDate,dd=cal[ds];
+    var yT=dd&&dd.you?Object.values(dd.you):[],fT=dd&&dd.friend?Object.values(dd.friend):[];
+    var hasD=!!(yT.length||fT.length);
+    if(isT){if(Object.keys((_st.you&&_st.you.daily)||{}).length||Object.keys((_st.friend&&_st.friend.daily)||{}).length)hasD=true;}
+    var cls='cal-day'+(isT?' today':'')+(isSel?' selected':'')+(hasD?' has-data':'');
+    html+='<div class="'+cls+'" data-date="'+ds+'"><div class="cal-dn2">'+d+'</div>'+(hasD?'<div class="cal-dots"><div class="cal-dot you"></div><div class="cal-dot friend"></div></div>':'')+'</div>';
+  }
+  document.getElementById('calGrid').innerHTML=html;
+}
+function renderDetail(ds){
+  var yn=(_st.names&&_st.names.you)||'A',fn=(_st.names&&_st.names.friend)||'S';
+  var cal=_st.calendar||{},today=todayStr(),yT,fT;
+  if(ds===today){
+    yT=Object.values((_st.you&&_st.you.daily)||{}).sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+    fT=Object.values((_st.friend&&_st.friend.daily)||{}).sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+  }else{
+    var dd=cal[ds];
+    if(!dd){document.getElementById('dayDetail').innerHTML='<div class="day-detail"><div class="no-data">No data for this date. Tasks are saved here when the day resets at midnight.</div></div>';return;}
+    yT=Object.values(dd.you||{}).sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+    fT=Object.values(dd.friend||{}).sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+  }
+  var d=new Date(ds+'T12:00:00');
+  var label=d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  function rows(tasks){if(!tasks.length)return'<div class="no-data" style="text-align:left;padding:8px 0 4px;">No tasks</div>';return tasks.map(function(t){return'<div class="task-row">'+(t.done?'<span class="t-done">✓</span>':'<span class="t-pend">○</span>')+'<span class="'+(t.done?'t-done-txt':'')+'">'+esc(t.text)+'</span>'+(t.carried?'<span style="font-size:9px;color:var(--rose);font-family:JetBrains Mono,monospace;margin-left:6px;"> ↩</span>':'')+'</div>';}).join('');}
+  document.getElementById('dayDetail').innerHTML='<div class="day-detail"><div class="day-title">📅 '+label+'</div>'+'<div class="user-section"><div class="user-lbl you">● '+yn+'\'s tasks</div>'+rows(yT)+'</div>'+'<div class="user-section"><div class="user-lbl friend">● '+fn+'\'s tasks</div>'+rows(fT)+'</div></div>';
+}
+document.getElementById('calGrid').addEventListener('click',function(e){var c=e.target.closest('[data-date]');if(!c)return;selDate=c.dataset.date;renderCal();renderDetail(selDate);document.getElementById('dayDetail').scrollIntoView({behavior:'smooth',block:'nearest'});});
+document.getElementById('prevBtn').addEventListener('click',function(){viewMonth--;if(viewMonth<0){viewMonth=11;viewYear--;}renderCal();});
+document.getElementById('nextBtn').addEventListener('click',function(){viewMonth++;if(viewMonth>11){viewMonth=0;viewYear++;}renderCal();});
+document.getElementById('todayBtn').addEventListener('click',function(){var n=new Date();viewYear=n.getFullYear();viewMonth=n.getMonth();selDate=todayStr();renderCal();renderDetail(selDate);});
+renderCal();renderDetail(selDate);
+})();
+</script>
+</body>
+</html>
