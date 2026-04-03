@@ -4,23 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>As_pire — Home</title>
-  <link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="theme.css?v=3" />
 </head>
 <body>
 
-<!-- ── Sticky Note ─────────────────────────────────────────── -->
 <div class="sticky-note-wrapper" id="stickyWrapper">
-  <div class="sticky-note" id="stickyExpanded">
+  <div class="sticky-note hidden" id="stickyExpanded">
     <button class="sticky-collapse-btn" onclick="collapseSticky()" title="Minimise">−</button>
     <div class="sticky-note-label">📌 Shared Note</div>
     <textarea id="stickyTextarea" placeholder="Write a shared note for both of you…" rows="4" oninput="onStickyInput()"></textarea>
   </div>
-  <div class="sticky-minimized hidden" id="stickyMin" onclick="expandSticky()" title="Open note">📌</div>
+  <div class="sticky-minimized" id="stickyMin" onclick="expandSticky()" title="Open note">📌</div>
 </div>
 
-<!-- ── App Shell ───────────────────────────────────────────── -->
 <div class="app-shell">
-  <!-- Sidebar -->
   <nav class="sidebar">
     <div class="sidebar-logo"><span class="logo-dot"></span><span>As_pire</span></div>
     <ul class="nav-links">
@@ -37,7 +34,6 @@
     </div>
   </nav>
 
-  <!-- Main -->
   <main class="main-content">
     <div class="page-header flex-between">
       <div>
@@ -46,20 +42,15 @@
       </div>
     </div>
 
-    <!-- Tab: Daily / Weekly -->
     <div style="display:flex;gap:10px;margin-bottom:20px;">
       <button class="btn btn-primary" id="tabDaily" onclick="switchTab('daily')">Daily Tasks</button>
       <button class="btn btn-ghost" id="tabWeekly" onclick="switchTab('weekly')">Weekly Tasks</button>
     </div>
 
-    <!-- Users Grid -->
-    <div class="users-grid" id="usersGrid">
-      <!-- Rendered by JS -->
-    </div>
+    <div class="users-grid" id="usersGrid"></div>
   </main>
 </div>
 
-<!-- Edit Modal -->
 <div class="modal-overlay" id="editModal">
   <div class="modal">
     <div class="modal-header">
@@ -77,11 +68,9 @@
   </div>
 </div>
 
-<!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js"></script>
+<script src="app.js?v=3"></script>
 <script>
-// ── State ─────────────────────────────────────────────────────
 let currentTab = 'daily';
 let allTasks = [];
 let knownUsers = [];
@@ -90,18 +79,13 @@ let stickyDebounce = null;
 let realtimeSub = null;
 let settingsSub = null;
 
-// ── Boot ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   const user = requireAuth();
   if (!user) return;
 
-  // Show user info
   document.getElementById('userNameDisplay').textContent = user.username;
   document.getElementById('userAvatar').textContent = user.username[0].toUpperCase();
-
-  // Date label
-  const today = new Date();
-  document.getElementById('todayLabel').textContent = today.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('todayLabel').textContent = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 
   await initSupabase();
   await loadKnownUsers();
@@ -112,14 +96,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadKnownUsers() {
-  // Fetch all distinct usernames from tasks + settings
-  // For simplicity, we store known usernames in settings table under 'usernames'
   try {
     const { data } = await supabase.from('settings').select('value').eq('key','usernames').single();
     knownUsers = data?.value ? JSON.parse(data.value) : [];
   } catch { knownUsers = []; }
-
-  // Ensure current user is registered
   const me = AppState.currentUser.username;
   if (!knownUsers.includes(me)) {
     knownUsers.push(me);
@@ -143,12 +123,9 @@ function renderUsersGrid() {
     return;
   }
   grid.innerHTML = knownUsers.map(u => renderUserSection(u)).join('');
-  // Attach listeners
   grid.querySelectorAll('.task-check').forEach(cb => {
     cb.addEventListener('change', e => {
-      const id = e.target.dataset.taskId;
-      const date = e.target.dataset.date;
-      handleToggleTask(id, date, e.target.checked);
+      handleToggleTask(e.target.dataset.taskId, e.target.dataset.date, e.target.checked);
     });
   });
 }
@@ -163,13 +140,9 @@ function renderUserSection(username) {
     dailyTasks = getDailyTasks(allTasks, username, today);
     fixedTasks = getFixedTasksAsDaily(allTasks, username, today);
   } else {
-    weeklyTasks = getWeeklyTasks(allTasks, username, wk)
-      .filter(t => !isWeeklyExpired(t.week_key));
+    weeklyTasks = getWeeklyTasks(allTasks, username, wk).filter(t => !isWeeklyExpired(t.week_key));
   }
-
-  const tabTasks = currentTab === 'daily'
-    ? [...fixedTasks, ...dailyTasks]
-    : weeklyTasks;
+  const tabTasks = currentTab === 'daily' ? [...fixedTasks, ...dailyTasks] : weeklyTasks;
 
   return `
   <div class="user-section" id="section-${escapeHtml(username)}">
@@ -179,47 +152,38 @@ function renderUserSection(username) {
         ${escapeHtml(username)}${isMe ? ' <span style="font-size:0.7rem;color:var(--text-muted);font-family:var(--font-body)">(you)</span>' : ''}
       </div>
       <span style="font-size:0.78rem;color:var(--text-muted);">
-        ${tabTasks.filter(t => {
-          const cd = t.completed_dates || [];
-          return t.completed || cd.includes(today);
-        }).length}/${tabTasks.length} done
+        ${tabTasks.filter(t => t.completed || (t.completed_dates || []).includes(today)).length}/${tabTasks.length} done
       </span>
     </div>
 
     ${currentTab === 'daily' ? `
       ${fixedTasks.length > 0 ? `
         <div class="task-section-label">📌 Fixed Daily</div>
-        <ul class="task-list">
-          ${fixedTasks.map(t => renderTaskItem(t, today, true)).join('')}
-        </ul>
+        <ul class="task-list">${fixedTasks.map(t => renderTaskItem(t, today, true)).join('')}</ul>
       ` : ''}
       <div class="task-section-label">Today's Tasks</div>
-      <ul class="task-list" id="daily-list-${escapeHtml(username)}">
+      <ul class="task-list">
         ${dailyTasks.length ? dailyTasks.map(t => renderTaskItem(t, today, false)).join('') : '<li class="text-muted" style="padding:8px 0;font-size:0.85rem;">No tasks yet.</li>'}
       </ul>
     ` : `
       <div class="task-section-label">This Week's Tasks</div>
-      <ul class="task-list" id="weekly-list-${escapeHtml(username)}">
+      <ul class="task-list">
         ${weeklyTasks.length ? weeklyTasks.map(t => renderTaskItem(t, today, false)).join('') : '<li class="text-muted" style="padding:8px 0;font-size:0.85rem;">No weekly tasks yet.</li>'}
       </ul>
     `}
 
     <div class="add-task-row">
-      <input class="add-task-input" type="text" id="newTask-${escapeHtml(username)}"
-        placeholder="Add ${currentTab} task…"
-        onkeydown="if(event.key==='Enter') addTaskForUser('${escapeHtml(username)}')" />
+      <input class="add-task-input" type="text" id="newTask-${escapeHtml(username)}" placeholder="Add ${currentTab} task…" onkeydown="if(event.key==='Enter') addTaskForUser('${escapeHtml(username)}')"/>
       <button class="btn btn-primary" onclick="addTaskForUser('${escapeHtml(username)}')">+</button>
     </div>
   </div>`;
 }
 
 function renderTaskItem(task, today, isFixed) {
-  const cd = task.completed_dates || [];
-  const done = task.completed || cd.includes(today);
+  const done = task.completed || (task.completed_dates || []).includes(today);
   return `
   <li class="task-item ${done ? 'done' : ''}" id="task-${task.id}">
-    <input type="checkbox" class="task-check" ${done ? 'checked' : ''}
-      data-task-id="${task.id}" data-date="${today}" />
+    <input type="checkbox" class="task-check" ${done ? 'checked' : ''} data-task-id="${task.id}" data-date="${today}" />
     <span class="task-label">${escapeHtml(task.text)}</span>
     ${isFixed ? '<span class="task-fixed-badge">FIXED</span>' : ''}
     <div class="task-actions">
@@ -229,20 +193,16 @@ function renderTaskItem(task, today, isFixed) {
   </li>`;
 }
 
-// ── Task Actions ──────────────────────────────────────────────
 async function addTaskForUser(username) {
   const input = document.getElementById(`newTask-${username}`);
   const text = input?.value?.trim();
   if (!text) return;
   input.value = '';
-  const today = todayStr();
-  const wk = weekKey();
   try {
     await addTask({
-      username, text,
-      type: currentTab,
-      date_key: currentTab === 'daily' ? today : null,
-      week_key: currentTab === 'weekly' ? wk : null,
+      username, text, type: currentTab,
+      date_key: currentTab === 'daily' ? todayStr() : null,
+      week_key: currentTab === 'weekly' ? weekKey() : null,
       is_fixed: false
     });
     showToast('Task added!');
@@ -253,12 +213,8 @@ async function addTaskForUser(username) {
 async function handleToggleTask(taskId, dateStr, isChecked) {
   try {
     await toggleTaskCompletedOnDate(taskId, dateStr, isChecked);
-    // Optimistic UI update
     const item = document.getElementById(`task-${taskId}`);
-    if (item) {
-      if (isChecked) item.classList.add('done');
-      else item.classList.remove('done');
-    }
+    if (item) isChecked ? item.classList.add('done') : item.classList.remove('done');
   } catch(e) { showToast(e.message, 'error'); }
 }
 
@@ -271,7 +227,6 @@ async function handleDeleteTask(taskId) {
   } catch(e) { showToast(e.message, 'error'); }
 }
 
-// ── Edit Modal ────────────────────────────────────────────────
 function openEditModal(taskId, text) {
   editingTaskId = taskId;
   document.getElementById('editTaskInput').value = text;
@@ -292,7 +247,6 @@ async function saveEditTask() {
   } catch(e) { showToast(e.message, 'error'); }
 }
 
-// ── Tab switching ─────────────────────────────────────────────
 function switchTab(tab) {
   currentTab = tab;
   document.getElementById('tabDaily').className = tab === 'daily' ? 'btn btn-primary' : 'btn btn-ghost';
@@ -300,37 +254,15 @@ function switchTab(tab) {
   renderUsersGrid();
 }
 
-// ── Sticky Note ───────────────────────────────────────────────
-async function loadSticky() {
-  const text = await fetchStickyNote();
-  document.getElementById('stickyTextarea').value = text;
-}
+async function loadSticky() { document.getElementById('stickyTextarea').value = await fetchStickyNote(); }
+function onStickyInput() { clearTimeout(stickyDebounce); stickyDebounce = setTimeout(() => saveStickyNote(document.getElementById('stickyTextarea').value), 800); }
+function collapseSticky() { document.getElementById('stickyExpanded').classList.add('hidden'); document.getElementById('stickyMin').classList.remove('hidden'); }
+function expandSticky() { document.getElementById('stickyMin').classList.add('hidden'); document.getElementById('stickyExpanded').classList.remove('hidden'); }
 
-function onStickyInput() {
-  clearTimeout(stickyDebounce);
-  stickyDebounce = setTimeout(() => {
-    saveStickyNote(document.getElementById('stickyTextarea').value);
-  }, 800);
-}
-
-function collapseSticky() {
-  document.getElementById('stickyExpanded').classList.add('hidden');
-  document.getElementById('stickyMin').classList.remove('hidden');
-}
-function expandSticky() {
-  document.getElementById('stickyMin').classList.add('hidden');
-  document.getElementById('stickyExpanded').classList.remove('hidden');
-}
-
-// ── Realtime ──────────────────────────────────────────────────
 function setupRealtime() {
-  realtimeSub = subscribeToTasks(async () => {
-    await loadAllTasks();
-  });
+  realtimeSub = subscribeToTasks(async () => await loadAllTasks());
   settingsSub = subscribeToSettings(async (payload) => {
-    if (payload?.new?.key === 'sticky_note') {
-      document.getElementById('stickyTextarea').value = payload.new.value || '';
-    }
+    if (payload?.new?.key === 'sticky_note') document.getElementById('stickyTextarea').value = payload.new.value || '';
     if (payload?.new?.key === 'usernames') {
       try { knownUsers = JSON.parse(payload.new.value); } catch {}
       await loadAllTasks();
@@ -338,10 +270,7 @@ function setupRealtime() {
   });
 }
 
-// Modal close on overlay click
-document.getElementById('editModal').addEventListener('click', function(e) {
-  if (e.target === this) closeEditModal();
-});
+document.getElementById('editModal').addEventListener('click', function(e) { if (e.target === this) closeEditModal(); });
 </script>
 </body>
 </html>
