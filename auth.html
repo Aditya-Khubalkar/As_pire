@@ -4,14 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>As_pire — Sign In</title>
-  <link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="theme.css?v=3" />
 </head>
 <body>
 <div class="auth-page">
   <div class="auth-card">
-    <div class="auth-logo">
-      <span class="logo-dot"></span> As_pire
-    </div>
+    <div class="auth-logo"><span class="logo-dot"></span> As_pire</div>
     <p class="auth-tagline">Your shared space for goals &amp; daily intentions.</p>
 
     <div id="authError" class="auth-error"></div>
@@ -25,9 +23,7 @@
         <label class="form-label" for="password">Password</label>
         <input class="form-input" type="password" id="password" placeholder="Enter your password" autocomplete="current-password" />
       </div>
-      <button class="btn btn-primary w-full mt-2" id="loginBtn" style="padding:12px;font-size:0.95rem;" onclick="handleLogin()">
-        Sign In
-      </button>
+      <button class="btn btn-primary w-full mt-2" id="loginBtn" style="padding:12px;font-size:0.95rem;" onclick="handleLogin()">Sign In</button>
       <p class="text-muted text-center mt-2">
         No account? <a href="#" onclick="showRegister()" style="color:var(--brand-green-dark);font-weight:600;">Register</a>
       </p>
@@ -46,9 +42,7 @@
         <label class="form-label" for="regConfirm">Confirm Password</label>
         <input class="form-input" type="password" id="regConfirm" placeholder="Confirm your password" />
       </div>
-      <button class="btn btn-primary w-full mt-2" style="padding:12px;font-size:0.95rem;" onclick="handleRegister()">
-        Create Account
-      </button>
+      <button class="btn btn-primary w-full mt-2" style="padding:12px;font-size:0.95rem;" onclick="handleRegister()">Create Account</button>
       <p class="text-muted text-center mt-2">
         Have an account? <a href="#" onclick="showLogin()" style="color:var(--brand-green-dark);font-weight:600;">Sign In</a>
       </p>
@@ -56,29 +50,13 @@
   </div>
 </div>
 
-<!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js"></script>
+<script src="app.js?v=3"></script>
 <script>
-  function showRegister() {
-    document.getElementById('loginForm').classList.add('hidden');
-    document.getElementById('registerForm').classList.remove('hidden');
-    clearError();
-  }
-  function showLogin() {
-    document.getElementById('registerForm').classList.add('hidden');
-    document.getElementById('loginForm').classList.remove('hidden');
-    clearError();
-  }
-  function showError(msg) {
-    const el = document.getElementById('authError');
-    el.textContent = msg;
-    el.classList.add('show');
-  }
-  function clearError() {
-    const el = document.getElementById('authError');
-    el.classList.remove('show');
-  }
+  function showRegister() { document.getElementById('loginForm').classList.add('hidden'); document.getElementById('registerForm').classList.remove('hidden'); clearError(); }
+  function showLogin() { document.getElementById('registerForm').classList.add('hidden'); document.getElementById('loginForm').classList.remove('hidden'); clearError(); }
+  function showError(msg) { const el = document.getElementById('authError'); el.textContent = msg; el.classList.add('show'); }
+  function clearError() { document.getElementById('authError').classList.remove('show'); }
 
   async function handleLogin() {
     const username = document.getElementById('username').value.trim();
@@ -88,7 +66,7 @@
     btn.textContent = 'Signing in…'; btn.disabled = true;
     try {
       await login(username, password);
-      window.location.href = 'index.html';
+      window.location.replace('index.html');
     } catch (e) {
       showError(e.message || 'Login failed. Check your credentials.');
       btn.textContent = 'Sign In'; btn.disabled = false;
@@ -105,28 +83,22 @@
     try {
       await register(username, password);
       showLogin();
-      clearError();
       document.getElementById('username').value = username;
       showError('Account created! Please sign in.');
       document.getElementById('authError').style.borderColor = 'var(--accent-done)';
       document.getElementById('authError').style.color = 'var(--accent-done)';
       document.getElementById('authError').style.background = 'rgba(76,175,116,0.1)';
-    } catch (e) {
-      showError(e.message || 'Registration failed.');
-    }
+    } catch (e) { showError(e.message || 'Registration failed.'); }
   }
 
-  // Enter key support
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       const registerVisible = !document.getElementById('registerForm').classList.contains('hidden');
-      if (registerVisible) handleRegister();
-      else handleLogin();
+      registerVisible ? handleRegister() : handleLogin();
     }
   });
 
-  // If already logged in, redirect
-  if (getSessionUser()) window.location.href = 'index.html';
+  if (getSessionUser()) window.location.replace('index.html');
 </script>
 </body>
 </html>
