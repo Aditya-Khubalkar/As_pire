@@ -280,6 +280,8 @@ body::after{content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;
 </style>
 </head>
 <body>
+<div id="v4Badge" style="position:fixed;top:10px;right:10px;background:#72b362;color:#0a1208;padding:4px 8px;font-family:monospace;font-size:12px;font-weight:bold;z-index:99999;border-radius:4px;pointer-events:none;">[ v4 ACTIVE ]</div>
+
 <canvas id="starCanvas"></canvas>
 
 <div class="topbar">
@@ -360,6 +362,55 @@ body::after{content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;
 (function(){
 'use strict';
 
+/* ── GLOBAL EVENT DELEGATION (God Mode) ── */
+// Moving this to the very top ensures clicks ALWAYS work even if the renderer hits an error.
+document.body.addEventListener('click', function(e) {
+  var btnYou = e.target.closest('#btnYou');
+  if(btnYou) { addRipple(btnYou, e); switchProfile('you'); return; }
+  
+  var btnFriend = e.target.closest('#btnFriend');
+  if(btnFriend) { addRipple(btnFriend, e); switchProfile('friend'); return; }
+
+  if(e.target.closest('#tDaily')) { switchTab('daily'); return; }
+  if(e.target.closest('#tWeekly')) { switchTab('weekly'); return; }
+  if(e.target.closest('#addBtn')) { addTask(); return; }
+
+  var folder = e.target.closest('.folder-wrap');
+  if(folder) {
+    var fid = folder.getAttribute('data-fid');
+    if(fid === 'f-you') switchProfile('you');
+    if(fid === 'f-friend') switchProfile('friend');
+    if(fid === 'f-weekly') switchTab('weekly');
+    var el = document.getElementById(fid);
+    if(el) el.classList.toggle('open');
+    return;
+  }
+
+  var chk = e.target.closest('[data-chk]');
+  if(chk) { toggleTask(chk.dataset.chk); return; }
+  
+  var edit = e.target.closest('[data-edit]');
+  if(edit) { startEdit(edit.dataset.edit); return; }
+  
+  var confirm = e.target.closest('[data-confirm]');
+  if(confirm) { confirmEdit(confirm.dataset.confirm); return; }
+  
+  var del = e.target.closest('[data-del]');
+  if(del) { deleteTask(del.dataset.del); return; }
+});
+
+document.body.addEventListener('keydown', function(e) {
+  if(e.target.id === 'tInput' && e.key === 'Enter') { addTask(); return; }
+  if(e.target.dataset.eid) {
+    if(e.key === 'Enter') confirmEdit(e.target.dataset.eid);
+    if(e.key === 'Escape') {
+      var el = document.querySelector('.task[data-id="'+e.target.dataset.eid+'"]');
+      if(el) el.classList.remove('editing');
+    }
+  }
+});
+
+
 /* ── HELPERS ── */
 function todayStr(){return new Date().toISOString().slice(0,10);}
 function nextMidnight(){var d=new Date();d.setHours(24,0,0,0);return d.getTime();}
@@ -369,14 +420,19 @@ function setDeep(o,path,val){var k=path.split('/');for(var i=0;i<k.length-1;i++)
 function delDeep(o,path){var k=path.split('/');for(var i=0;i<k.length-1;i++){if(!o[k[i]])return;o=o[k[i]];}delete o[k[k.length-1]];}
 function defaultState(){return{names:{you:'A',friend:'S'},quote:'',streak:0,lastActive:'',fixedTasks:[],calendar:{},you:{daily:{},weekly:{},weeklyReset:null,lastDailyReset:''},friend:{daily:{},weekly:{},weeklyReset:null,lastDailyReset:''}};}
 
-/* ── STATE ── */
-var _st=JSON.parse(localStorage.getItem('aspire_s')||'null')||defaultState();
-if(!_st.you)_st=defaultState();
-if(!_st.friend)_st.friend={daily:{},weekly:{},weeklyReset:null,lastDailyReset:''};
-if(!_st.fixedTasks)_st.fixedTasks=[];
-if(!_st.calendar)_st.calendar={};
-if(!_st.you.lastDailyReset)_st.you.lastDailyReset='';
-if(!_st.friend.lastDailyReset)_st.friend.lastDailyReset='';
+/* ── BULLETPROOF STATE INIT ── */
+var _st;
+try {
+  _st = JSON.parse(localStorage.getItem('aspire_s')||'null')||defaultState();
+  if(!_st || typeof _st !== 'object') _st = defaultState();
+  if(!_st.you) _st.you = {daily:{},weekly:{},weeklyReset:null,lastDailyReset:''};
+  if(!_st.friend) _st.friend = {daily:{},weekly:{},weeklyReset:null,lastDailyReset:''};
+  if(!_st.fixedTasks) _st.fixedTasks = [];
+  if(!_st.calendar) _st.calendar = {};
+  if(!_st.names) _st.names = {you:'A', friend:'S'};
+} catch(e) {
+  _st = defaultState();
+}
 
 /* ── FIREBASE BRIDGE ── */
 var _fbReady=false,_fbSet=null,_fbDel=null;
@@ -461,104 +517,110 @@ var profile='you', tab='daily', _newIds={}, _lastFolderSig='';
 
 /* ── RENDER ENGINE ── */
 function updateTimers() {
-  var s = _st;
-  var raw = (s[profile] && s[profile][tab]) ? s[profile][tab] : {};
-  var tasks = Object.values(raw);
-  var done = tasks.filter(function(t){ return t.done; }).length;
+  try {
+    var s = _st;
+    var raw = (s[profile] && s[profile][tab]) ? s[profile][tab] : {};
+    var tasks = Object.values(raw);
+    var done = tasks.filter(function(t){ return t.done; }).length;
 
-  if (tab === 'daily') {
-    var ms = nextMidnight() - Date.now();
-    if (tasks.length > 0 && done === tasks.length) {
-      document.getElementById('cdLbl').textContent = 'All done! ✦';
-      document.getElementById('cdVal').textContent = '0s';
+    if (tab === 'daily') {
+      var ms = nextMidnight() - Date.now();
+      if (tasks.length > 0 && done === tasks.length) {
+        document.getElementById('cdLbl').textContent = 'All done! ✦';
+        document.getElementById('cdVal').textContent = '0s';
+      } else {
+        document.getElementById('cdLbl').textContent = 'Resets at midnight';
+        document.getElementById('cdVal').textContent = fmtMs(ms);
+      }
     } else {
-      document.getElementById('cdLbl').textContent = 'Resets at midnight';
-      document.getElementById('cdVal').textContent = fmtMs(ms);
+      var rt = s[profile] ? s[profile].weeklyReset : null;
+      if (tasks.length > 0 && done === tasks.length) {
+        document.getElementById('cdLbl').textContent = 'All done! ✦';
+        document.getElementById('cdVal').textContent = '0s';
+      } else if (rt && rt > Date.now()) {
+        document.getElementById('cdLbl').textContent = 'Weekly resets in';
+        document.getElementById('cdVal').textContent = fmtMs(rt - Date.now());
+      } else {
+        document.getElementById('cdLbl').textContent = 'No weekly tasks yet';
+        document.getElementById('cdVal').textContent = '—';
+      }
     }
-  } else {
-    var rt = s[profile] ? s[profile].weeklyReset : null;
-    if (tasks.length > 0 && done === tasks.length) {
-      document.getElementById('cdLbl').textContent = 'All done! ✦';
-      document.getElementById('cdVal').textContent = '0s';
-    } else if (rt && rt > Date.now()) {
-      document.getElementById('cdLbl').textContent = 'Weekly resets in';
-      document.getElementById('cdVal').textContent = fmtMs(rt - Date.now());
-    } else {
-      document.getElementById('cdLbl').textContent = 'No weekly tasks yet';
-      document.getElementById('cdVal').textContent = '—';
-    }
-  }
+  } catch(e) {}
 }
 
 function renderAll(){
-  checkDailyReset();
-  var s=_st;
-  var yn=(s.names&&s.names.you)||'A';
-  var fn=(s.names&&s.names.friend)||'S';
+  try {
+    checkDailyReset();
+    var s=_st;
+    var yn=(s.names&&s.names.you)||'A';
+    var fn=(s.names&&s.names.friend)||'S';
 
-  document.getElementById('nameYou').textContent=yn;
-  document.getElementById('nameFriend').textContent=fn;
-  document.getElementById('avYou').textContent=yn[0].toUpperCase();
-  document.getElementById('avFriend').textContent=fn[0].toUpperCase();
-  document.getElementById('friendLabel').textContent=fn;
-  document.getElementById('streakBadge').textContent='🔥 '+(s.streak||0)+' day streak';
-  var sb=document.getElementById('sBody');
-  if(document.activeElement!==sb)sb.value=s.quote||'';
+    document.getElementById('nameYou').textContent=yn;
+    document.getElementById('nameFriend').textContent=fn;
+    document.getElementById('avYou').textContent=yn[0].toUpperCase();
+    document.getElementById('avFriend').textContent=fn[0].toUpperCase();
+    document.getElementById('friendLabel').textContent=fn;
+    document.getElementById('streakBadge').textContent='🔥 '+(s.streak||0)+' day streak';
+    var sb=document.getElementById('sBody');
+    if(document.activeElement!==sb)sb.value=s.quote||'';
 
-  document.getElementById('btnYou').classList.toggle('active',profile==='you');
-  document.getElementById('btnFriend').classList.toggle('active',profile==='friend');
-  document.getElementById('friendNotice').style.display=profile==='friend'?'flex':'none';
-  document.getElementById('tDaily').classList.toggle('active',tab==='daily');
-  document.getElementById('tWeekly').classList.toggle('active',tab==='weekly');
-  document.getElementById('tabPill').classList.toggle('right',tab==='weekly');
+    document.getElementById('btnYou').classList.toggle('active',profile==='you');
+    document.getElementById('btnFriend').classList.toggle('active',profile==='friend');
+    document.getElementById('friendNotice').style.display=profile==='friend'?'flex':'none';
+    document.getElementById('tDaily').classList.toggle('active',tab==='daily');
+    document.getElementById('tWeekly').classList.toggle('active',tab==='weekly');
+    document.getElementById('tabPill').classList.toggle('right',tab==='weekly');
 
-  var yd=Object.values((s.you&&s.you.daily)||{});
-  var ydone=yd.filter(function(t){return t.done;}).length;
-  var hp=yd.length?Math.round(ydone/yd.length*100):0;
-  document.getElementById('heroProgress').textContent=hp+'%';
-  document.getElementById('heroBar').style.width=hp+'%';
-  document.getElementById('heroDaily').textContent=yd.length+' tasks';
-  document.getElementById('heroWeekly').textContent=Object.keys((s.you&&s.you.weekly)||{}).length+' tasks';
-  document.getElementById('heroStreak').textContent=(s.streak||0)+' days';
-  document.getElementById('heroUsers').textContent=yn+' · '+fn;
+    var yd=Object.values((s.you&&s.you.daily)||{});
+    var ydone=yd.filter(function(t){return t.done;}).length;
+    var hp=yd.length?Math.round(ydone/yd.length*100):0;
+    document.getElementById('heroProgress').textContent=hp+'%';
+    document.getElementById('heroBar').style.width=hp+'%';
+    document.getElementById('heroDaily').textContent=yd.length+' tasks';
+    document.getElementById('heroWeekly').textContent=Object.keys((s.you&&s.you.weekly)||{}).length+' tasks';
+    document.getElementById('heroStreak').textContent=(s.streak||0)+' days';
+    document.getElementById('heroUsers').textContent=yn+' · '+fn;
 
-  var raw=(s[profile]&&s[profile][tab])?s[profile][tab]:{};
-  var tasks=Object.keys(raw).map(function(id){return Object.assign({id:id},raw[id]);}).sort(function(a,b){return(a.ts||0)-(b.ts||0);});
-  var done=tasks.filter(function(t){return t.done;}).length;
-  var pct=tasks.length?Math.round(done/tasks.length*100):0;
+    var raw=(s[profile]&&s[profile][tab])?s[profile][tab]:{};
+    var tasks=Object.keys(raw).map(function(id){return Object.assign({id:id},raw[id]);}).sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+    var done=tasks.filter(function(t){return t.done;}).length;
+    var pct=tasks.length?Math.round(done/tasks.length*100):0;
 
-  document.getElementById('progPct').textContent=pct+'%';
-  document.getElementById('progLbl').textContent=tab.toUpperCase()+' PROGRESS';
-  document.getElementById('progFill').style.width=pct+'%';
+    document.getElementById('progPct').textContent=pct+'%';
+    document.getElementById('progLbl').textContent=tab.toUpperCase()+' PROGRESS';
+    document.getElementById('progFill').style.width=pct+'%';
 
-  var list=document.getElementById('taskList');
-  if(!tasks.length){
-    list.innerHTML='<div class="empty"><div class="empty-icon">🌱</div><div class="empty-txt">no tasks yet — add one above</div></div>';
-  }else{
-    list.innerHTML=tasks.map(function(t){
-      var isNew=!!_newIds[t.id];
-      var cls='task'+(t.done?' done':'')+(t.carried&&!t.done?' carried':'')+(isNew?' task-new':'');
-      return '<div class="'+cls+'" data-id="'+t.id+'">'
-        +'<div class="chk '+(t.done?'on':'')+'" data-chk="'+t.id+'"><span class="chk-mark">✓</span></div>'
-        +'<div class="task-txt">'+esc(t.text)+'</div>'
-        +'<input class="task-edit-input" type="text" value="'+esc(t.text)+'" data-eid="'+t.id+'">'
-        +'<span class="task-by">'+esc(t.by||'')+'</span>'
-        +'<div class="task-actions">'
-          +'<button class="t-act-btn edit" data-edit="'+t.id+'">✏️</button>'
-          +'<button class="t-act-btn confirm" data-confirm="'+t.id+'">✓</button>'
-          +'<button class="t-act-btn del" data-del="'+t.id+'">🗑</button>'
-        +'</div></div>';
-    }).join('');
-    _newIds={};
+    var list=document.getElementById('taskList');
+    if(!tasks.length){
+      list.innerHTML='<div class="empty"><div class="empty-icon">🌱</div><div class="empty-txt">no tasks yet — add one above</div></div>';
+    }else{
+      list.innerHTML=tasks.map(function(t){
+        var isNew=!!_newIds[t.id];
+        var cls='task'+(t.done?' done':'')+(t.carried&&!t.done?' carried':'')+(isNew?' task-new':'');
+        return '<div class="'+cls+'" data-id="'+t.id+'">'
+          +'<div class="chk '+(t.done?'on':'')+'" data-chk="'+t.id+'"><span class="chk-mark">✓</span></div>'
+          +'<div class="task-txt">'+esc(t.text)+'</div>'
+          +'<input class="task-edit-input" type="text" value="'+esc(t.text)+'" data-eid="'+t.id+'">'
+          +'<span class="task-by">'+esc(t.by||'')+'</span>'
+          +'<div class="task-actions">'
+            +'<button class="t-act-btn edit" data-edit="'+t.id+'">✏️</button>'
+            +'<button class="t-act-btn confirm" data-confirm="'+t.id+'">✓</button>'
+            +'<button class="t-act-btn del" data-del="'+t.id+'">🗑</button>'
+          +'</div></div>';
+      }).join('');
+      _newIds={};
+    }
+    document.getElementById('allDone').classList.toggle('show',tasks.length>0&&done===tasks.length);
+
+    var fd=Object.values((s.friend&&s.friend.daily)||{});
+    var fDone=fd.filter(function(t){return t.done;}).length;
+    var sig=yn+'|'+fn+'|'+yd.length+'|'+ydone+'|'+fd.length+'|'+fDone;
+    if(sig!==_lastFolderSig){_lastFolderSig=sig;renderFolders();}
+    
+    updateTimers(); 
+  } catch(err) {
+    console.error("Render crashed:", err);
   }
-  document.getElementById('allDone').classList.toggle('show',tasks.length>0&&done===tasks.length);
-
-  var fd=Object.values((s.friend&&s.friend.daily)||{});
-  var fDone=fd.filter(function(t){return t.done;}).length;
-  var sig=yn+'|'+fn+'|'+yd.length+'|'+ydone+'|'+fd.length+'|'+fDone;
-  if(sig!==_lastFolderSig){_lastFolderSig=sig;renderFolders();}
-  
-  updateTimers(); 
 }
 
 /* ── ACTIONS ── */
@@ -625,65 +687,6 @@ function renderFolders(){
     +'</div>';
   }).join('');
 }
-
-/* ── GLOBAL EVENT DELEGATION (God Mode) ── */
-document.body.addEventListener('click', function(e) {
-  
-  // 1. Profile Buttons
-  var btnYou = e.target.closest('#btnYou');
-  if(btnYou) { addRipple(btnYou, e); switchProfile('you'); return; }
-  
-  var btnFriend = e.target.closest('#btnFriend');
-  if(btnFriend) { addRipple(btnFriend, e); switchProfile('friend'); return; }
-
-  // 2. Tabs
-  if(e.target.closest('#tDaily')) { switchTab('daily'); return; }
-  if(e.target.closest('#tWeekly')) { switchTab('weekly'); return; }
-
-  // 3. Add Task
-  if(e.target.closest('#addBtn')) { addTask(); return; }
-
-  // 4. Folders
-  var folder = e.target.closest('.folder-wrap');
-  if(folder) {
-    var fid = folder.getAttribute('data-fid');
-    if(fid === 'f-you') switchProfile('you');
-    if(fid === 'f-friend') switchProfile('friend');
-    if(fid === 'f-weekly') switchTab('weekly');
-    
-    var el = document.getElementById(fid);
-    if(el) el.classList.toggle('open');
-    return;
-  }
-
-  // 5. Task List Interactions
-  var chk = e.target.closest('[data-chk]');
-  if(chk) { toggleTask(chk.dataset.chk); return; }
-  
-  var edit = e.target.closest('[data-edit]');
-  if(edit) { startEdit(edit.dataset.edit); return; }
-  
-  var confirm = e.target.closest('[data-confirm]');
-  if(confirm) { confirmEdit(confirm.dataset.confirm); return; }
-  
-  var del = e.target.closest('[data-del]');
-  if(del) { deleteTask(del.dataset.del); return; }
-  
-});
-
-// Keydown listeners
-document.body.addEventListener('keydown', function(e) {
-  // Pressing Enter in task input
-  if(e.target.id === 'tInput' && e.key === 'Enter') { addTask(); return; }
-  // Pressing Enter / Esc when editing a task
-  if(e.target.dataset.eid) {
-    if(e.key === 'Enter') confirmEdit(e.target.dataset.eid);
-    if(e.key === 'Escape') {
-      var el = document.querySelector('.task[data-id="'+e.target.dataset.eid+'"]');
-      if(el) el.classList.remove('editing');
-    }
-  }
-});
 
 
 /* STICKY */
@@ -772,8 +775,6 @@ function addRipple(btn,e){
 
 /* BOOT */
 renderAll();
-
-// We loop the updateTimers safely
 setInterval(updateTimers, 1000);
 
 })();
