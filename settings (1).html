@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — AS-pire ✦</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+<div class="mesh"></div>
+<div class="glow-orb" style="width:300px;height:300px;background:rgba(80,160,80,0.07);bottom:10vh;left:-80px;animation-duration:16s;"></div>
+
+<!-- ══ FLOATING STICKY NOTE ══ -->
+<div id="floatingSticky">
+  <button class="fs-toggle" id="fsToggle" title="Collapse">−</button>
+  <div class="fs-hdr">✦ shared note</div>
+  <textarea class="fs-body" id="fsBody" rows="2" placeholder="Write something..."></textarea>
+  <div class="fs-saved" id="fsSaved">saved ✓</div>
+</div>
+
+<div class="top-bar">
+  <a href="index.html" class="logo-wrap">
+    <span class="logo-AS">AS</span><span class="logo-dash">-</span><span class="logo-pire">pire</span>
+  </a>
+  <div class="top-actions">
+    <a href="calendar.html" class="icon-btn" title="Calendar">📅</a>
+    <a href="index.html" class="back-btn">← Back</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="page-header">
+    <div class="page-title">Settings</div>
+    <div class="page-subtitle">Customize your experience</div>
+  </div>
+
+  <!-- NAMES -->
+  <div class="settings-section">
+    <div class="section-label">User Names</div>
+    <div class="setting-card">
+      <div class="m-field">
+        <label>A — Your Name</label>
+        <input type="text" class="m-input" id="nameA" placeholder="e.g. Aryan">
+      </div>
+      <div class="m-field" style="margin-top:12px;">
+        <label>S — Friend's Name</label>
+        <input type="text" class="m-input" id="nameS" placeholder="e.g. Sahil">
+      </div>
+      <div class="m-btns" style="margin-top:16px;">
+        <button class="m-btn primary" id="saveNamesBtn" onclick="saveNames()">Save Names ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIXED DAILY TASKS -->
+  <div class="settings-section">
+    <div class="section-label">Fixed Daily Tasks</div>
+    <div class="setting-card">
+      <div class="setting-info" style="margin-bottom:8px;">
+        <div class="s-name">📌 Auto-Added Daily Tasks</div>
+        <div class="s-desc">These tasks appear automatically every day for the chosen user, and show in the calendar with completion status</div>
+      </div>
+
+      <div class="fixed-task-list" id="fixedTaskList"></div>
+
+      <div class="add-fixed-row">
+        <input type="text" class="t-input" id="fixedInput" placeholder="Add a fixed daily task...">
+        <button class="add-btn" onclick="promptAddFixed()" title="Add">+</button>
+      </div>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);margin-top:8px;">
+        You'll be asked whether this is for A or S after typing the task.
+      </p>
+    </div>
+  </div>
+
+  <!-- SYNC STATUS -->
+  <div class="settings-section">
+    <div class="section-label">Sync Status</div>
+    <div class="setting-card">
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="s-name">☁️ Firebase Sync</div>
+          <div class="s-desc" id="syncStatus">Checking connection...</div>
+        </div>
+        <div id="syncIndicator" style="width:10px;height:10px;border-radius:50%;background:var(--green-accent);flex-shrink:0;"></div>
+      </div>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);margin-top:14px;line-height:1.7;">
+        Project: aspire-2924d · Realtime Database<br>
+        Path: <span style="color:var(--green-accent);">aspire/</span><br>
+        Live sync between both users in real-time.
+      </p>
+    </div>
+  </div>
+
+  <!-- DATA MANAGEMENT -->
+  <div class="settings-section">
+    <div class="section-label">Data</div>
+    <div class="setting-card">
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="s-name">🗑 Clear All Tasks</div>
+          <div class="s-desc">Delete active tasks for both users (calendar preserved)</div>
+        </div>
+        <button class="m-btn secondary" style="flex:0;white-space:nowrap;padding:10px 18px;" onclick="clearAllTasks()">Clear</button>
+      </div>
+    </div>
+    <div class="setting-card" style="margin-top:10px;">
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="s-name">💥 Reset Everything</div>
+          <div class="s-desc">Wipe all data including calendar — fresh start</div>
+        </div>
+        <button class="m-btn danger" style="flex:0;white-space:nowrap;padding:10px 18px;" onclick="resetAll()">Reset</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- WHO IS THIS FOR? modal -->
+<div class="overlay" id="confirmModal">
+  <div class="modal">
+    <div class="modal-title">Add for whom?</div>
+    <p style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted2);margin-bottom:16px;">This fixed task will appear every day for:</p>
+    <div id="confirmPreview" style="background:var(--s2);border-radius:10px;padding:12px 16px;font-size:14px;color:var(--text);margin-bottom:20px;border:1px solid var(--border2);font-style:italic;"></div>
+    <div class="m-btns">
+      <button class="m-btn secondary" id="btnForA" onclick="confirmFixed('you')">A — <span id="labelA">A</span></button>
+      <button class="m-btn primary"   id="btnForS" onclick="confirmFixed('friend')">S — <span id="labelS">S</span></button>
+    </div>
+    <div class="m-btns" style="margin-top:8px;">
+      <button class="m-btn secondary" onclick="closeConfirm()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="sync-pill">
+  <div class="sync-dot local" id="syncDot"></div>
+  <span id="syncLbl">local</span>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyDErNk02qqYnbVFskumgNGch47gJJCzMTA",
+  authDomain:"aspire-2924d.firebaseapp.com",
+  databaseURL:"https://aspire-2924d-default-rtdb.firebaseio.com",
+  projectId:"aspire-2924d",
+  storageBucket:"aspire-2924d.firebasestorage.app",
+  messagingSenderId:"260852889050",
+  appId:"1:260852889050:web:136fe46f8fd42db64b3ce3"
+};
+const fbs=document.createElement('script');fbs.type='module';
+fbs.textContent=`
+  import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import{getDatabase,ref,set,onValue}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  try{
+    const app=initializeApp(${JSON.stringify(FIREBASE_CONFIG)});
+    const db=getDatabase(app);
+    window._fbPersist=(path,val)=>set(ref(db,'aspire/'+path),val);
+    onValue(ref(db,'aspire'),(snap)=>{if(snap.val())window._fbStateUpdate(snap.val());});
+    window._fbReady=true;
+  }catch(e){console.warn('Firebase:',e);}
+`;
+document.head.appendChild(fbs);
+window._fbReady=false;
+
+let _state=JSON.parse(localStorage.getItem('aspire_s')||'null')||{names:{you:'A',friend:'S'},fixedTasks:{you:[],friend:[]}};
+if(!_state.fixedTasks) _state.fixedTasks={you:[],friend:[]};
+
+window._fbStateUpdate=function(ns){
+  _state=ns;
+  if(!_state.fixedTasks)_state.fixedTasks={you:[],friend:[]};
+  render();
+  // Sync sticky
+  var fsb=document.getElementById('fsBody');
+  if(document.activeElement!==fsb) fsb.value=_state.quote||'';
+};
+
+setInterval(function(){
+  if(window._fbReady){
+    document.getElementById('syncDot').className='sync-dot live';
+    document.getElementById('syncLbl').textContent='live 🔥';
+    document.getElementById('syncStatus').textContent='Connected to Firebase Realtime Database ✓';
+    document.getElementById('syncIndicator').style.background='var(--sage)';
+  }
+},1000);
+
+function saveAll(){
+  localStorage.setItem('aspire_s',JSON.stringify(_state));
+  if(window._fbReady&&window._fbPersist) window._fbPersist('fixedTasks',_state.fixedTasks);
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function render(){
+  var yn=(_state.names&&_state.names.you)||'A';
+  var fn=(_state.names&&_state.names.friend)||'S';
+  document.getElementById('nameA').value=yn;
+  document.getElementById('nameS').value=fn;
+  document.getElementById('labelA').textContent=yn;
+  document.getElementById('labelS').textContent=fn;
+
+  var all=[];
+  ((_state.fixedTasks&&_state.fixedTasks.you)||[]).forEach(function(t){all.push(Object.assign({},t,{owner:'you',ownerLabel:yn}));});
+  ((_state.fixedTasks&&_state.fixedTasks.friend)||[]).forEach(function(t){all.push(Object.assign({},t,{owner:'friend',ownerLabel:fn}));});
+
+  var el=document.getElementById('fixedTaskList');
+  if(!all.length){
+    el.innerHTML='<p style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--muted2);padding:6px 0;">No fixed tasks yet.</p>';
+  } else {
+    el.innerHTML=all.map(function(t){
+      return '<div class="fixed-task-item">'
+        +'<span class="ft-text">'+esc(t.text)+'</span>'
+        +'<span class="ft-who">'+esc(t.ownerLabel)+'</span>'
+        +'<button class="ft-del" onclick="removeFixed(\''+t.owner+'\',\''+t.id+'\')">×</button>'
+        +'</div>';
+    }).join('');
+  }
+}
+
+window.saveNames=function(){
+  var y=document.getElementById('nameA').value.trim()||'A';
+  var f=document.getElementById('nameS').value.trim()||'S';
+  if(!_state.names) _state.names={};
+  _state.names.you=y; _state.names.friend=f;
+  localStorage.setItem('aspire_s',JSON.stringify(_state));
+  if(window._fbReady&&window._fbPersist){
+    window._fbPersist('names/you',y); window._fbPersist('names/friend',f);
+  }
+  var btn=document.getElementById('saveNamesBtn');
+  btn.textContent='✓ Saved!'; btn.style.background='linear-gradient(135deg,#4a9a4e,var(--green-accent))';
+  setTimeout(function(){btn.textContent='Save Names ✓';btn.style.background='';},1500);
+  render();
+};
+
+var _pendingText='';
+window.promptAddFixed=function(){
+  var text=document.getElementById('fixedInput').value.trim();
+  if(!text) return;
+  _pendingText=text;
+  document.getElementById('confirmPreview').textContent='"'+text+'"';
+  document.getElementById('confirmModal').classList.add('show');
+};
+window.closeConfirm=function(){
+  document.getElementById('confirmModal').classList.remove('show');
+  _pendingText='';
+};
+window.confirmFixed=function(who){
+  if(!_pendingText) return;
+  var id='fx'+Date.now()+Math.random().toString(36).slice(2,5);
+  if(!_state.fixedTasks) _state.fixedTasks={you:[],friend:[]};
+  if(!_state.fixedTasks[who]) _state.fixedTasks[who]=[];
+  _state.fixedTasks[who].push({id:id,text:_pendingText});
+  saveAll();
+  document.getElementById('fixedInput').value='';
+  closeConfirm();
+  render();
+};
+window.removeFixed=function(who,id){
+  if(!_state.fixedTasks||!_state.fixedTasks[who]) return;
+  _state.fixedTasks[who]=_state.fixedTasks[who].filter(function(t){return t.id!==id;});
+  saveAll();
+  render();
+};
+
+window.clearAllTasks=function(){
+  if(!confirm('Clear all active tasks for both users? Calendar data is preserved.')) return;
+  ['you','friend'].forEach(function(p){
+    if(_state[p]){_state[p].daily={};_state[p].weekly={};_state[p].dailyReset=null;_state[p].weeklyReset=null;}
+  });
+  localStorage.setItem('aspire_s',JSON.stringify(_state));
+  if(window._fbReady&&window._fbPersist){
+    ['you','friend'].forEach(function(p){
+      window._fbPersist(p+'/daily',{});window._fbPersist(p+'/weekly',{});
+      window._fbPersist(p+'/dailyReset',null);window._fbPersist(p+'/weeklyReset',null);
+    });
+  }
+  alert('Tasks cleared!');
+};
+window.resetAll=function(){
+  if(!confirm('Wipe ALL data including calendar history?')) return;
+  if(!confirm('Last warning — this cannot be undone!')) return;
+  localStorage.removeItem('aspire_s');
+  if(window._fbReady&&window._fbPersist) window._fbPersist('',null);
+  location.reload();
+};
+
+document.getElementById('confirmModal').addEventListener('click',function(e){if(e.target===document.getElementById('confirmModal'))closeConfirm();});
+document.getElementById('fixedInput').addEventListener('keydown',function(e){if(e.key==='Enter')window.promptAddFixed();});
+
+// ── FLOATING STICKY NOTE ──
+var fsb=document.getElementById('fsBody');
+fsb.value=_state.quote||'';
+var qt=null;
+fsb.addEventListener('input',function(){
+  clearTimeout(qt);
+  qt=setTimeout(function(){
+    _state.quote=fsb.value;
+    localStorage.setItem('aspire_s',JSON.stringify(_state));
+    if(window._fbReady&&window._fbPersist) window._fbPersist('quote',_state.quote);
+    var el=document.getElementById('fsSaved'); el.classList.add('show');
+    setTimeout(function(){el.classList.remove('show');},1500);
+  },500);
+});
+var stickyCollapsed=false;
+document.getElementById('fsToggle').addEventListener('click',function(e){
+  e.stopPropagation();
+  stickyCollapsed=!stickyCollapsed;
+  document.getElementById('floatingSticky').classList.toggle('collapsed',stickyCollapsed);
+  document.getElementById('fsToggle').textContent=stickyCollapsed?'+':'−';
+});
+(function(){
+  var el=document.getElementById('floatingSticky');
+  var dragging=false,ox=0,oy=0;
+  el.addEventListener('mousedown',function(e){
+    if(e.target.tagName==='TEXTAREA'||e.target.tagName==='BUTTON') return;
+    dragging=true;el.classList.add('dragging');
+    var rect=el.getBoundingClientRect();
+    ox=e.clientX-rect.left;oy=e.clientY-rect.top;e.preventDefault();
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!dragging) return;
+    var x=Math.max(0,Math.min(e.clientX-ox,window.innerWidth-el.offsetWidth));
+    var y=Math.max(0,Math.min(e.clientY-oy,window.innerHeight-el.offsetHeight));
+    el.style.left=x+'px';el.style.top=y+'px';el.style.transform='rotate(-1deg)';
+  });
+  document.addEventListener('mouseup',function(){if(dragging){dragging=false;el.classList.remove('dragging');el.style.transform='';}});
+})();
+
+// ── STARS ──
+(function(){
+  var c=document.getElementById('starCanvas'),ctx=c.getContext('2d'),stars=[],W,H;
+  function resize(){W=c.width=innerWidth;H=c.height=innerHeight;genStars();}
+  function genStars(){stars=[];for(var i=0;i<90;i++)stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+0.2,baseO:Math.random()*0.35+0.06,speed:Math.random()*0.18+0.03,phase:Math.random()*Math.PI*2,freq:Math.random()*0.02+0.005,hue:Math.random()>0.5?'128,184,135':'212,168,83'});}
+  var t=0;
+  function draw(){ctx.clearRect(0,0,W,H);t+=0.016;stars.forEach(function(s){var o=s.baseO*(0.5+0.5*Math.sin(t*s.freq*60+s.phase));ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='rgba('+s.hue+','+o+')';ctx.fill();s.y-=s.speed*0.22;if(s.y<-2)s.y=H+2;});requestAnimationFrame(draw);}
+  window.addEventListener('resize',resize);resize();draw();
+})();
+
+// ── CURSOR SPARKS ──
+(function(){
+  var last=0;
+  document.addEventListener('mousemove',function(e){
+    if(Date.now()-last<55)return;last=Date.now();
+    var el=document.createElement('div');el.className='cursor-spark';
+    el.style.cssText='left:'+e.clientX+'px;top:'+e.clientY+'px;width:'+(2+Math.random()*3)+'px;height:'+(2+Math.random()*3)+'px;background:'+(Math.random()>0.5?'#80B887':'#d4a853')+';animation-duration:'+(0.4+Math.random()*0.3)+'s;';
+    document.body.appendChild(el);setTimeout(function(){el.remove();},700);
+  });
+})();
+
+render();
+});
+</script>
+</body>
+</html>
