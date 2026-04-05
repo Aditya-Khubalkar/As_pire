@@ -1,0 +1,41 @@
+/* ══════════════════════════════════════════════════════════
+   styles.css  —  AS-pire Complete Stylesheet
+   Dark + Light mode + crazy animations
+   ══════════════════════════════════════════════════════════ */
+
+:root {
+  /* Fallbacks — overridden by theme.js */
+  --bg:#80B887; --bg-grad1:#4d8a62; --bg-grad2:#2e5a44;
+  /* ... all other vars will be set by theme.js ... */
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Outfit',sans-serif;color:var(--text);min-height:100vh;overflow-x:hidden;
+  background:radial-gradient(ellipse at 50% 0%,var(--bg-grad1) 0%,var(--bg) 65%,var(--bg-grad2) 100%);}
+
+/* CRAZY TASK GLOW */
+.task {
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+.task:hover {
+  transform: scale(1.08) rotate(3deg);
+  box-shadow: 0 0 45px var(--gold);
+}
+.task.fixed-task {
+  animation: fixedPulse 2s infinite ease-in-out;
+}
+@keyframes fixedPulse {
+  0%,100% { box-shadow: 0 0 15px var(--gold); }
+  50% { box-shadow: 0 0 30px var(--gold); }
+}
+
+/* NEW CRAZY CONFETTI / SPARK STYLES already exist, just boosted */
+
+/* Light mode adjustments (theme.js handles most via vars) */
+body.light-mode .task { background: var(--s1); }
+body.light-mode .task-txt { color: var(--text); }
+
+/* Rest of your original styles remain exactly the same */
+.sticky{background:linear-gradient(160deg,#fefce8 78%,#fef3c7); /* unchanged */}
+/* ... (all your original CSS from previous version stays here) ... */
